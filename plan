@@ -1,0 +1,155 @@
+Bar Chart Race
+Antigravity Implementation Plan
+
+
+Platform	Google Antigravity
+Proje	Bar Chart Race Web Uygulaması
+Versiyon	v1.0 — MVP
+Aşama	Aşama 1 (Bar Chart Race Only)
+
+1. Goal
+CSV verisi yüklenebilen, dönemler arası smooth animasyonla çalışan, 1080p ve 4K olarak WebM/MP4 video indirilebilen bir bar chart race web uygulaması geliştir. Uygulama tamamen client-side çalışır; sunucu gerekmez.
+
+2. Tech Stack
+Katman	Teknoloji
+Frontend Framework	React 18 + TypeScript + Vite
+Grafik / Animasyon	D3.js v7 (canvas render — SVG değil)
+Stil	Tailwind CSS v3
+State Yönetimi	Zustand
+Video Export	Canvas API + MediaRecorder + @ffmpeg/ffmpeg (wasm)
+CSV Parse	PapaParse
+Backend	Yok — tamamen client-side, localStorage
+
+Not: D3.js canvas kullanılmalı, SVG değil. MediaRecorder video export için canvas.captureStream() zorunludur.
+
+3. Proje Mimarisi
+Antigravity'ye aşağıdaki klasör yapısını oluşturmasını söyle:
+
+src/
+  components/
+    Sidebar/
+      UploadZone.tsx       # CSV sürükle-bırak
+      ColumnMapper.tsx     # Sütun eşleme (isim / değer / zaman)
+      ChartSettings.tsx    # Başlık, bar sayısı, renk paleti, birim
+      ExportPanel.tsx      # 1080p / 4K seçimi, FPS, indirme
+    Chart/
+      RaceChart.tsx        # D3 canvas render motoru
+      PlaybackBar.tsx      # Oynat / Durdur / Slider
+      RecordingIndicator.tsx
+    shared/
+      Toast.tsx
+  hooks/
+    useCSVParser.ts        # CSV → normalize edilmiş veri
+    useChartRenderer.ts   # D3 draw loop, interpolasyon
+    useVideoExporter.ts   # Canvas capture → WebM → MP4
+    usePlayback.ts         # Frame yönetimi, hız, seek
+  store/
+    chartStore.ts          # Zustand global state
+  utils/
+    interpolate.ts         # Frame arası easing
+    colorPalettes.ts       # Vivid / Pastel / Neon / Earth
+    formatValue.ts         # T / B / M / K formatlama
+  App.tsx
+
+4. Core Features — Task List
+Antigravity'ye bu görevleri sırayla yaptır. Her görevi onayladıktan sonra bir sonrakine geç.
+
+#	Görev	Detay	Dosya
+1	Proje kurulumu	Vite + React + TS scaffold, Tailwind, Zustand, D3, PapaParse, @ffmpeg/ffmpeg yükle	package.json
+2	CSV Parser	Virgül & noktalı virgül desteği, header auto-detect, tip tespiti, hatalı satır skip	useCSVParser.ts
+3	UploadZone	Sürükle-bırak + tıkla, dosya validasyonu, örnek veri butonu	UploadZone.tsx
+4	ColumnMapper	İsim/değer/zaman dropdown, zaman otomatik sıralama, önizleme satırı	ColumnMapper.tsx
+5	D3 Canvas Renderer	drawFrame() fonksiyonu: sırala → pozisyon hesapla → canvas çiz (bar, etiket, değer, dönem)	useChartRenderer.ts
+6	Frame Interpolation	easeInOutCubic ile dönemler arası smooth value geçişi, renk sabit kal	interpolate.ts
+7	ChartSettings	Başlık, bar sayısı (3–20), dönem süresi (300–3000ms), birim, renk paleti	ChartSettings.tsx
+8	PlaybackBar	Oynat/Durdur, hız 0.25x–4x, timeline slider, dönem etiketi	PlaybackBar.tsx
+9	ExportPanel UI	1080p / 4K toggle, FPS seçimi (24/30/60), RAM uyarısı (4K için)	ExportPanel.tsx
+10	Video Export	Offscreen canvas, captureStream(), MediaRecorder, MP4 önce WebM fallback	useVideoExporter.ts
+11	FFmpeg.wasm	WebM → MP4 dönüşümü tarayıcıda, loading göstergesi (ilk yükleme ~30MB)	useVideoExporter.ts
+12	Örnek Veri	10 ülke / 5 yıllık GDP verisi, uygulama açılışında hazır gelsin	sampleData.ts
+13	Polish	Progress bar, Toast bildirimleri, REC göstergesi, dosya adı otomatik	App.tsx
+
+5. Video Export — Teknik Detay
+Bu en kritik bölüm. Antigravity'ye birebir bu akışı implement ettir:
+
+5.1 Çözünürlük & Bitrate
+Ayar	Değer
+1080p canvas	1920 × 1080 px (offscreen)
+4K canvas	3840 × 2160 px (offscreen)
+1080p bitrate	20 Mbps
+4K bitrate	80 Mbps
+FPS seçenekleri	24 / 30 / 60
+
+5.2 Kayıt Akışı
+•	1. Kullanıcı çözünürlük ve FPS seçer
+•	2. Offscreen canvas oluştur (görünen canvas'tan bağımsız)
+•	3. canvas.captureStream(fps) ile stream al
+•	4. MediaRecorder ile kayıt başlat (video/mp4 dene → yoksa video/webm)
+•	5. Her frame için: drawFrameInterpolated() → offscreen canvas'a çiz
+•	6. Tüm frameler bitince mediaRecorder.stop()
+•	7. Blob oluştur → @ffmpeg/ffmpeg ile WebM → MP4 dönüştür
+•	8. Dosyayı indir: bar-chart-race-1080p.mp4
+
+5.3 Codec Öncelik Sırası
+video/mp4; codecs="avc1.42E01E"  ← önce bunu dene
+video/webm; codecs="vp9"            ← yoksa bunu
+video/webm; codecs="vp8"            ← yoksa bunu
+video/webm                           ← son fallback
+
+⚠ Önemli Kısıtlar
+4K export için kullanıcı tarayıcısında 8GB+ RAM olması önerilir. Bunu ExportPanel'de UI uyarısı olarak göster.
+FFmpeg.wasm ilk yüklemede ~30MB indirir. Loading spinner ile kullanıcıyı bilgilendir.
+Canvas fontları sistem fontu kullan (web fontları canvas'ta render sorunu çıkarabilir).
+
+6. Chart Renderer — Çizim Detayı
+drawFrame() fonksiyonu her frame için şunları çizmeli:
+
+Eleman	Açıklama
+Arka plan	#0a0a0f koyu renk, tam canvas doldur
+Dönem etiketi	Sağ alt köşe, büyük şeffaf font (canvas H * 0.22 px)
+Başlık	Sol üst, bold (canvas H * 0.045 px)
+Bar	Rounded rect, gradient renk, glow shadow
+İsim etiketi	Barın solunda, sağa hizalı
+Sıra (#1, #2…)	İsim etiketinin üzerinde, küçük ve soluk
+Değer etiketi	Barın sağında, formatValue() ile (T/B/M/K)
+Renk	Kategoriye göre sabit (entityColors map)
+
+Renk Paletleri
+Vivid:  #6c63ff, #ff6584, #43e97b, #f7971e, #12c2e9 …
+Pastel: #a8edea, #fed6e3, #d299c2, #fef9d7, #a1c4fd …
+Neon:   #ff0080, #00ff88, #0080ff, #ffff00, #ff8000 …
+Earth:  #c1440e, #d4842a, #e6c067, #8fbc5c, #4e8b57 …
+
+7. Antigravity'e Verilecek Prompt
+Aşağıdaki metni Antigravity'nin Mission Control'üne yapıştır:
+
+Build a bar chart race web app with the following spec:
+- React 18 + TypeScript + Vite + Tailwind CSS + Zustand
+- D3.js v7 rendering on <canvas> (NOT svg)
+- CSV upload with PapaParse, column mapping (name/value/time)
+- Smooth frame interpolation with easeInOutCubic
+- Playback: play/pause, speed 0.25x-4x, timeline slider
+- Video export: 1080p (1920x1080) and 4K (3840x2160)
+- MediaRecorder with canvas.captureStream(fps)
+- @ffmpeg/ffmpeg wasm for WebM to MP4 conversion in browser
+- FPS options: 24/30/60, bitrate: 20Mbps (1080p) / 80Mbps (4K)
+- Sample GDP data (10 countries, 5 years) on first load
+- No backend, fully client-side, localStorage for persistence
+
+8. Kısıtlar & Notlar
+
+•	SVG yasak: Video export için Canvas API zorunlu. D3'ü canvas modunda kullan.
+•	Font: Canvas çizimlerinde sistem fontları kullan. Google Fonts canvas'ta sorun çıkarır.
+•	MP4 codec: avc1 önce dene, tarayıcı desteklemiyorsa WebM'e düş. Kullanıcıya dosya uzantısını bildir.
+•	4K RAM: ExportPanel'de "4K için 8GB+ RAM önerilir" uyarısı göster.
+•	FFmpeg yükleme: İlk export'ta ~30MB wasm dosyası iner. Spinner + ilerleme göster.
+•	Renk tutarlılığı: entityColors map'i kullan. Aynı isim her zaman aynı rengi alsın.
+•	Offscreen canvas: Export canvas'ı görünen canvas'tan bağımsız oluştur. Boyutu seçilen çözünürlüğe göre ayarla.
+
+9. Gelecek Aşamalar (Kapsam Dışı)
+Bu plan Aşama 1'i kapsar. Aşağıdakiler Aşama 2 ve 3 için not olarak bırakılmıştır:
+
+Aşama	Kapsam
+Aşama 2	Line chart race, Bubble chart race, Template sistemi, Paylaşım linki, Embed kodu, GIF export
+Aşama 3	Kullanıcı sistemi, Dashboard, Proje yönetimi, Google Sheets sync, REST API, Takım işbirliği
+
