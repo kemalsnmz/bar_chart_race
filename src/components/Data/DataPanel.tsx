@@ -3,7 +3,7 @@ import { useChartStore } from '../../store/chartStore';
 import { useCSVParser } from '../../hooks/useCSVParser';
 import { ColumnMapper } from '../Sidebar/ColumnMapper';
 import { ContextMenu } from './ContextMenu';
-import { sampleData } from '../../utils/sampleData';
+import { sampleData, sampleImages } from '../../utils/sampleData';
 
 const EXTRA_ROWS = 30;
 const EXTRA_COLS = 8;
@@ -235,6 +235,23 @@ export function DataPanel() {
   const ctxSortAsc  = () => setSortState({ col: primaryCol ?? 'label', dir: 'asc'  });
   const ctxSortDesc = () => setSortState({ col: primaryCol ?? 'label', dir: 'desc' });
 
+  /* ── Auto-fill image URLs ── */
+  const handleAutoFillImages = useCallback(() => {
+    const template = window.prompt(
+      'URL template — use {name} as placeholder:\n\nExamples:\n• https://cdn.simpleicons.org/{name}  (brands/tech)\n• https://flagcdn.com/w80/{name}.png  (countries, 2-letter code)',
+      'https://cdn.simpleicons.org/{name}'
+    );
+    if (!template) return;
+    entities.forEach(name => {
+      const existing = data.find(d => d.name === name)?.imageUrl ?? '';
+      if (!existing) {
+        const slug = name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9.-]/g, '');
+        const url = template.replace(/\{name\}/g, slug);
+        updateImageUrl(name, url);
+      }
+    });
+  }, [entities, data, updateImageUrl]);
+
   /* ── File upload ── */
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv') && file.type !== 'text/csv') { alert('Please upload a CSV file.'); return; }
@@ -243,7 +260,11 @@ export function DataPanel() {
   };
   const loadSample = async () => {
     const { data, periods } = await parseCSV(sampleData);
-    setData(data, periods); setPendingCSV(null);
+    const dataWithImages = data.map(row => ({
+      ...row,
+      imageUrl: sampleImages[row.name] ?? row.imageUrl,
+    }));
+    setData(dataWithImages, periods); setPendingCSV(null);
   };
 
   /* ── Helpers ── */
@@ -327,6 +348,13 @@ export function DataPanel() {
                     <div className="cdesc">
                       <span className={`type-badge ${col.type}`}>{col.type === 'img' ? '🖼' : 'ABC'}</span>
                       <div className="cdesc-label">{col.label}</div>
+                      {col.type === 'img' && (
+                        <button
+                          className="img-autofill-btn"
+                          onClick={e => { e.stopPropagation(); handleAutoFillImages(); }}
+                          title="Auto-fill image URLs from a URL template"
+                        >Auto</button>
+                      )}
                     </div>
                   </td>
                 ))}

@@ -16,14 +16,16 @@ function guessMapping(columns: string[]): ColumnMapping {
     columns[2] ||
     columns[1] ||
     columns[0];
-  return { name: nameCol, value: valCol, time: timeCol };
+  const imageCol =
+    columns.find(c => /image|img|pic|icon|url/i.test(c));
+  return { name: nameCol, value: valCol, time: timeCol, image: imageCol || '' };
 }
 
 export function ColumnMapper() {
   const { pendingCSV, setPendingCSV, setData } = useChartStore();
   const { parseCSV } = useCSVParser();
 
-  const [mapping, setMapping] = useState<ColumnMapping>({ name: '', value: '', time: '' });
+  const [mapping, setMapping] = useState<ColumnMapping>({ name: '', value: '', time: '', image: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -96,6 +98,11 @@ export function ColumnMapper() {
       <div className="form-group">
         <label className="form-label">Time / Period</label>
         {sel('time')}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Image URL (Optional)</label>
+        {sel('image')}
       </div>
 
       {error && <p className="column-mapper-error">{error}</p>}

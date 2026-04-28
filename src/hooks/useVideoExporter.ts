@@ -105,10 +105,10 @@ export function useVideoExporter() {
         await ffmpeg.load({
           coreURL: await fetchFile(
             'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'
-          ),
+          ) as any,
           wasmURL: await fetchFile(
             'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-          ),
+          ) as any,
         });
 
         const inputName = 'input.webm';
@@ -118,7 +118,7 @@ export function useVideoExporter() {
         await ffmpeg.exec(['-i', inputName, '-c:v', 'copy', outputName]);
 
         const fileData = await ffmpeg.readFile(outputName);
-        const data = new Uint8Array(fileData as ArrayBuffer);
+        const data = new Uint8Array(fileData as any);
 
         finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
         finalExtension = 'mp4';

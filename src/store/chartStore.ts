@@ -11,6 +11,10 @@ export interface DataRow {
 
 export type ColorMode = 'category' | 'bar' | 'single';
 export type TextAlign = 'left' | 'center' | 'right';
+export type ImageSizing = 'fill' | 'fit' | 'stretch';
+export type ImageShape = 'rectangle' | 'circle';
+export type BarEndShape = 'round' | 'flat' | 'arrow';
+export type ImagePosition = 'left' | 'inside' | 'right';
 
 export interface ChartSettings {
   title: string;
@@ -24,6 +28,19 @@ export interface ChartSettings {
   titleAlign: TextAlign;
   titleBold: boolean;
   titleFontSize: number;
+  barOpacity: number;
+  imageHeight: number;
+  imageWidth: number;
+  imageMarginRight: number;
+  imageSizing: ImageSizing;
+  imageShape: ImageShape;
+  labelVisible: boolean;
+  labelFontSize: number;
+  labelBold: boolean;
+  barEndShape: BarEndShape;
+  imagePosition: ImagePosition;
+  barThickness: number;
+  barGap: number;
 }
 
 export interface PlaybackState {
@@ -80,12 +97,25 @@ export const useChartStore = create<ChartStore>((set) => ({
     durationMs: 1000,
     unit: '',
     palette: 'vivid',
-    backgroundColor: '#0a0a0f',
+    backgroundColor: '#ffffff',
     colorMode: 'bar',
     singleColorText: 'Apple: #6c63ff\nAmazon: #f7971e\nGoogle: #43e97b',
     titleAlign: 'left',
     titleBold: true,
     titleFontSize: 45,
+    barOpacity: 1.0,
+    imageHeight: 40,
+    imageWidth: 40,
+    imageMarginRight: 4,
+    imageSizing: 'fill',
+    imageShape: 'circle',
+    labelVisible: true,
+    labelFontSize: 60,
+    labelBold: true,
+    barEndShape: 'round',
+    imagePosition: 'left',
+    barThickness: 80,
+    barGap: 20,
   },
 
   playback: {
@@ -106,7 +136,7 @@ export const useChartStore = create<ChartStore>((set) => ({
   pendingCSV: null,
   setPendingCSV: (p) => set(() => ({ pendingCSV: p })),
 
-  setData: (data, periods) => set((state) => ({
+  setData: (data, periods) => set(() => ({
     data, 
     periods, 
     entityColors: new Map() // Reset colors on new data

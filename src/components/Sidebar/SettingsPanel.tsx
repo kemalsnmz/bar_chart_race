@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode, TextAlign } from '../../store/chartStore';
+import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, ImagePosition } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -51,7 +51,6 @@ function ColorTab({ id, active, onClick, children }: {
 export function SettingsPanel() {
   const { settings, updateSettings, data } = useChartStore();
 
-  const allEntities = [...new Set(data.map(d => d.name))];
   const allCategories = [...new Set(data.map(d => d.category ?? '(no category)'))];
 
   return (
@@ -116,6 +115,13 @@ export function SettingsPanel() {
               value={settings.palette as PaletteName}
               onChange={p => updateSettings({ palette: p })}
             />
+            <div className="fl-field" style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
+              <input type="number" className="form-input spinner-visible" min={0.1} max={1.0} step={0.1}
+                value={settings.barOpacity}
+                onChange={e => updateSettings({ barOpacity: Number(e.target.value) })}
+                style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+            </div>
           </div>
         )}
 
@@ -150,16 +156,16 @@ export function SettingsPanel() {
         </div>
 
         {/* Alignment */}
-        <div className="fl-field">
-          <label className="fl-tiny-label">Alignment</label>
-          <div className="fl-tabs" style={{ marginTop: 4 }}>
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Alignment</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
             {(['left', 'center', 'right'] as TextAlign[]).map(align => (
               <button
                 key={align}
                 className={'fl-color-tab' + (settings.titleAlign === align ? ' fl-color-tab-active' : '')}
                 onClick={() => updateSettings({ titleAlign: align })}
                 title={align.charAt(0).toUpperCase() + align.slice(1)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {align === 'left' && (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
@@ -182,48 +188,199 @@ export function SettingsPanel() {
         </div>
 
         {/* Bold toggle */}
-        <div className="fl-field">
-          <label className="fl-tiny-label">Weight</label>
-          <div className="fl-tabs" style={{ marginTop: 4 }}>
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
             <button
               className={'fl-color-tab' + (!settings.titleBold ? ' fl-color-tab-active' : '')}
               onClick={() => updateSettings({ titleBold: false })}
-              style={{ flex: 1, fontWeight: 400 }}
+              style={{ fontWeight: 400 }}
             >Normal</button>
             <button
               className={'fl-color-tab' + (settings.titleBold ? ' fl-color-tab-active' : '')}
               onClick={() => updateSettings({ titleBold: true })}
-              style={{ flex: 1, fontWeight: 700 }}
+              style={{ fontWeight: 700 }}
             >Bold</button>
           </div>
         </div>
 
         {/* Font size */}
-        <div className="fl-field">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
-            <span className="fl-val-badge">{settings.titleFontSize}</span>
-          </div>
-          <input type="range" className="fl-slider" min={20} max={80} step={1}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+          <input
+            type="number"
+            className="form-input spinner-visible"
+            min={20} max={80} step={1}
             value={settings.titleFontSize}
-            onChange={e => updateSettings({ titleFontSize: Number(e.target.value) })} />
-          <div className="fl-slider-ends"><span>Small</span><span>Large</span></div>
+            onChange={e => updateSettings({ titleFontSize: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }}
+          />
+        </div>
+
+      </Section>
+
+      {/* ════ Image ════ */}
+      <Section title="Image" defaultOpen={false}>
+
+        {/* Height / Width / Margin right */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
+          <div className="fl-field" style={{ flex: 1 }}>
+            <label className="fl-tiny-label" style={{ fontSize: 9 }}>Height</label>
+            <input type="number" className="form-input spinner-visible" min={8} max={200} step={1}
+              value={settings.imageHeight}
+              onChange={e => updateSettings({ imageHeight: Number(e.target.value) })}
+              style={{ textAlign: 'center', padding: '3px 2px' }} />
+          </div>
+          <div className="fl-field" style={{ flex: 1 }}>
+            <label className="fl-tiny-label" style={{ fontSize: 9 }}>Width</label>
+            <input type="number" className="form-input spinner-visible" min={8} max={200} step={1}
+              value={settings.imageWidth}
+              onChange={e => updateSettings({ imageWidth: Number(e.target.value) })}
+              style={{ textAlign: 'center', padding: '3px 2px' }} />
+          </div>
+          <div className="fl-field" style={{ flex: 1 }}>
+            <label className="fl-tiny-label" style={{ fontSize: 9 }}>Margin right</label>
+            <input type="number" className="form-input spinner-visible" min={-100} max={100} step={1}
+              value={settings.imageMarginRight}
+              onChange={e => updateSettings({ imageMarginRight: Number(e.target.value) })}
+              style={{ textAlign: 'center', padding: '3px 2px' }} />
+          </div>
+        </div>
+
+        {/* Position */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Position</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button
+              className={'fl-color-tab' + (settings.imagePosition === 'left' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ imagePosition: 'left' })}>
+              Left
+            </button>
+            <button
+              className={'fl-color-tab' + (settings.imagePosition === 'inside' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ imagePosition: 'inside' })}>
+              Inside
+            </button>
+            <button
+              className={'fl-color-tab' + (settings.imagePosition === 'right' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ imagePosition: 'right' })}>
+              Right
+            </button>
+          </div>
+        </div>
+
+        {/* Image sizing */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Size</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            {(['fill', 'fit', 'stretch'] as ImageSizing[]).map(s => (
+              <button key={s}
+                className={'fl-color-tab' + (settings.imageSizing === s ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ imageSizing: s })}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Shape */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Shape</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            {(['rectangle', 'circle'] as ImageShape[]).map(s => (
+              <button key={s}
+                className={'fl-color-tab' + (settings.imageShape === s ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ imageShape: s })}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </Section>
+
+      {/* ════ Label ════ */}
+      <Section title="Label" defaultOpen={false}>
+
+        {/* Visible */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Visible</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (settings.labelVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (!settings.labelVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelVisible: false })}>Off</button>
+          </div>
+        </div>
+
+        {/* Font size */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+          <input type="number" className="form-input spinner-visible" min={20} max={120} step={1}
+            value={settings.labelFontSize}
+            onChange={e => updateSettings({ labelFontSize: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        {/* Weight */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (!settings.labelBold ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelBold: false })}
+              style={{ fontWeight: 400 }}>Normal</button>
+            <button className={'fl-color-tab' + (settings.labelBold ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelBold: true })}
+              style={{ fontWeight: 700 }}>Bold</button>
+          </div>
         </div>
 
       </Section>
 
       {/* ════ Bars ════ */}
       <Section title="Bars" defaultOpen={false}>
-        <div className="fl-field">
-          <label className="fl-tiny-label">Max visible bars</label>
-          <input type="number" className="form-input" min={3} max={20}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Max visible bars</label>
+          <input type="number" className="form-input spinner-visible" min={3} max={20}
             value={settings.maxBars}
-            onChange={e => updateSettings({ maxBars: Number(e.target.value) })} />
+            onChange={e => updateSettings({ maxBars: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
         </div>
-        <div className="fl-field">
-          <label className="fl-tiny-label">Unit</label>
-          <input className="form-input" placeholder="e.g. B$, %" value={settings.unit}
-            onChange={e => updateSettings({ unit: e.target.value })} />
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Unit</label>
+          <input className="form-input" placeholder="e.g. B$" value={settings.unit}
+            onChange={e => updateSettings({ unit: e.target.value })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>End Shape</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            {(['round', 'flat', 'arrow'] as BarEndShape[]).map(s => (
+              <button key={s}
+                className={'fl-color-tab' + (settings.barEndShape === s ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ barEndShape: s })}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Thickness</label>
+          <input type="number" className="form-input spinner-visible" min={1} max={200}
+            value={settings.barThickness}
+            onChange={e => updateSettings({ barThickness: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Gap</label>
+          <input type="number" className="form-input spinner-visible" min={0} max={200}
+            value={settings.barGap}
+            onChange={e => updateSettings({ barGap: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
         </div>
       </Section>
 

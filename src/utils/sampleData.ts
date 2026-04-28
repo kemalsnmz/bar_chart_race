@@ -148,3 +148,18 @@ export const sampleMeta = {
   title: 'Tech Giants Annual Revenue',
   unit: 'B$',
 };
+
+export const sampleImages: Record<string, string> = {
+  Apple:     'https://cdn.simpleicons.org/apple',
+  Samsung:   'https://cdn.simpleicons.org/samsung',
+  Microsoft: 'https://cdn.simpleicons.org/microsoft',
+  IBM:       'https://cdn.simpleicons.org/ibm',
+  Google:    'https://cdn.simpleicons.org/google',
+  Amazon:    'https://cdn.simpleicons.org/amazon',
+  Intel:     'https://cdn.simpleicons.org/intel',
+  Cisco:     'https://cdn.simpleicons.org/cisco',
+  Oracle:    'https://cdn.simpleicons.org/oracle',
+  Meta:      'https://cdn.simpleicons.org/meta',
+  NVIDIA:    'https://cdn.simpleicons.org/nvidia',
+  Netflix:   'https://cdn.simpleicons.org/netflix',
+};

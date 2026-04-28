@@ -24,15 +24,16 @@ function setupCanvas(canvas: HTMLCanvasElement, w: number, h: number) {
 export function RaceChart() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number>();
-  const lastTimeRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
+  const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
   const currentPeriodIndex = useChartStore((s) => s.playback.currentPeriodIndex);
   const currentTimeInPeriod = useChartStore((s) => s.playback.currentTimeInPeriod);
   const isExporting = useChartStore((s) => s.isExporting);
-  const { drawFrame } = useChartRenderer();
+  const periodsLen = useChartStore((s) => s.periods.length);
+  const { drawFrame, imgVersion } = useChartRenderer();
   const drawFrameRef = useRef(drawFrame);
   drawFrameRef.current = drawFrame;
 
@@ -79,7 +80,7 @@ export function RaceChart() {
       ctx.textBaseline = 'middle';
       ctx.fillText('Upload data to see chart preview', w / 2, h / 2);
     }
-  }, [isPlaying, currentPeriodIndex, currentTimeInPeriod]);
+  }, [isPlaying, currentPeriodIndex, currentTimeInPeriod, imgVersion, periodsLen]);
 
   // Animation loop — canvas drawn directly in rAF, no React render on each frame
   useEffect(() => {
@@ -112,9 +113,8 @@ export function RaceChart() {
         const ctx = canvas.getContext('2d')!;
 
         if (idx >= periods.length - 1 && t >= 1) {
-          drawFrameRef.current(ctx, w, h, periods.length - 1, 1);
-          updatePlayback({ currentPeriodIndex: periods.length - 1, currentTimeInPeriod: 1, isPlaying: false });
-          return;
+          idx = 0;
+          t = 0;
         }
 
         drawFrameRef.current(ctx, w, h, idx, t);

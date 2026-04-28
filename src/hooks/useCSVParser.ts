@@ -5,13 +5,14 @@ export interface ColumnMapping {
   name: string;
   value: string;
   time: string;
+  image?: string;
 }
 
 function runParse(file: File | string, config: Papa.ParseConfig) {
   if (typeof file === 'string') {
     Papa.parse(file, config);
   } else {
-    Papa.parse(file, config);
+    Papa.parse(file as any, config);
   }
 }
 
@@ -27,7 +28,9 @@ function autoDetectMapping(columns: string[]): ColumnMapping {
     columns.find(c => c !== nameCol && c !== valCol) ||
     columns[2] ||
     columns[1];
-  return { name: nameCol, value: valCol, time: timeCol };
+  const imageCol =
+    columns.find(c => /image|img|pic|icon|url/i.test(c));
+  return { name: nameCol, value: valCol, time: timeCol, image: imageCol };
 }
 
 export function useCSVParser() {
@@ -37,10 +40,12 @@ export function useCSVParser() {
         header: true,
         preview: 1,
         complete: (results) => {
-          if (!results.meta.fields) return reject('No headers found');
+          if (results.errors && results.errors.length > 0) {
+            return reject(new Error(results.errors[0].message));
+          }
+          if (!results.meta.fields) return reject(new Error('No headers found'));
           resolve(results.meta.fields);
-        },
-        error: (err) => reject(err.message),
+        }
       });
     });
   };
@@ -58,7 +63,7 @@ export function useCSVParser() {
           if (!results.meta.fields) return reject('No headers found');
           const columns = results.meta.fields;
 
-          const { name: nameCol, value: valCol, time: timeCol } =
+          const { name: nameCol, value: valCol, time: timeCol, image: imageCol } =
             mapping || autoDetectMapping(columns);
 
           const rawData = results.data as Record<string, unknown>[];
@@ -72,6 +77,7 @@ export function useCSVParser() {
                 name: String(row[nameCol]),
                 value: Number(row[valCol]),
                 time: timeStr,
+                imageUrl: imageCol && row[imageCol] ? String(row[imageCol]) : undefined,
               });
               periodSet.add(timeStr);
             }
@@ -85,8 +91,7 @@ export function useCSVParser() {
           });
 
           resolve({ data, periods, columns });
-        },
-        error: (err) => reject(err.message),
+        }
       });
     });
   };

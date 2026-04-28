@@ -16,14 +16,6 @@ interface Props extends ColMenuState {
   onRemoveRow: (name: string) => void;
 }
 
-const ICONS: Record<string, string> = {
-  'insert-left':  '←',
-  'insert-right': '→',
-  'remove-col':   '✕',
-  'sort-asc':     '↑',
-  'sort-desc':    '↓',
-  'remove-row':   '✕',
-};
 
 export function ColumnMenu({ x, y, colType, colId, onClose, onSort }: Props) {
   const { addPeriod, removePeriod } = useChartStore();
