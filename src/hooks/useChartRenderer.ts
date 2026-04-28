@@ -68,11 +68,22 @@ export function useChartRenderer() {
     const xScale = d3.scaleLinear().domain([0, maxVal]).range([0, chartWidth]);
 
     // Title
+    const titleSize = Math.round(height * (settings.titleFontSize / 1000));
+    const titleWeight = settings.titleBold ? 'bold' : '400';
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold ' + Math.round(height * 0.045) + 'px Inter, sans-serif';
-    ctx.textAlign = 'left';
+    ctx.font = titleWeight + ' ' + titleSize + 'px Inter, sans-serif';
     ctx.textBaseline = 'top';
-    ctx.fillText(settings.title, width * 0.05, height * 0.04);
+    const titleY = height * 0.04;
+    if (settings.titleAlign === 'center') {
+      ctx.textAlign = 'center';
+      ctx.fillText(settings.title, width / 2, titleY);
+    } else if (settings.titleAlign === 'right') {
+      ctx.textAlign = 'right';
+      ctx.fillText(settings.title, width * 0.95, titleY);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.fillText(settings.title, width * 0.05, titleY);
+    }
 
     // Period watermark
     ctx.fillStyle = 'rgba(255,255,255,0.1)';

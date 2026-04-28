@@ -10,6 +10,7 @@ export interface DataRow {
 }
 
 export type ColorMode = 'category' | 'bar' | 'single';
+export type TextAlign = 'left' | 'center' | 'right';
 
 export interface ChartSettings {
   title: string;
@@ -20,6 +21,9 @@ export interface ChartSettings {
   backgroundColor: string;
   colorMode: ColorMode;
   singleColorText: string;
+  titleAlign: TextAlign;
+  titleBold: boolean;
+  titleFontSize: number;
 }
 
 export interface PlaybackState {
@@ -79,6 +83,9 @@ export const useChartStore = create<ChartStore>((set) => ({
     backgroundColor: '#0a0a0f',
     colorMode: 'bar',
     singleColorText: 'Apple: #6c63ff\nAmazon: #f7971e\nGoogle: #43e97b',
+    titleAlign: 'left',
+    titleBold: true,
+    titleFontSize: 45,
   },
 
   playback: {

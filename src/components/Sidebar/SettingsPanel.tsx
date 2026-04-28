@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode } from '../../store/chartStore';
+import type { ColorMode, TextAlign } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -18,7 +18,7 @@ function Section({ title, children, defaultOpen = true }: {
           style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform .18s ease', flexShrink: 0 }}>
           <polyline points="9 18 15 12 9 6"/>
         </svg>
-        <span>{title}</span>
+        <span style={{ fontWeight: 700 }}>{title}</span>
       </button>
       {open && <div className="fl-section-body">{children}</div>}
     </div>
@@ -112,20 +112,6 @@ export function SettingsPanel() {
         {/* By bar */}
         {settings.colorMode === 'bar' && (
           <div className="fl-color-body">
-            <div className="fl-entity-list" style={{ marginBottom: 10 }}>
-              {allEntities.slice(0, 10).map((name, i) => {
-                const pal = palettes[settings.palette as PaletteName];
-                return (
-                  <div key={name} className="fl-entity-row">
-                    <span className="fl-entity-dot" style={{ background: pal[i % pal.length] }} />
-                    <span className="fl-entity-name">{name}</span>
-                  </div>
-                );
-              })}
-              {allEntities.length > 10 && (
-                <span className="fl-hint" style={{ marginTop: 2 }}>+{allEntities.length - 10} more…</span>
-              )}
-            </div>
             <PresetPaletteSelector
               value={settings.palette as PaletteName}
               onChange={p => updateSettings({ palette: p })}
@@ -151,18 +137,79 @@ export function SettingsPanel() {
 
       </Section>
 
-      {/* ════ Caption ════ */}
-      <Section title="Caption">
+      {/* ════ Text ════ */}
+      <Section title="Text">
+
+        <SubHeading label="Title" />
+
+        {/* Title input */}
         <div className="fl-field">
-          <label className="fl-tiny-label">Title</label>
           <input className="form-input" value={settings.title}
-            onChange={e => updateSettings({ title: e.target.value })} />
+            onChange={e => updateSettings({ title: e.target.value })}
+            placeholder="Chart title…" />
         </div>
+
+        {/* Alignment */}
         <div className="fl-field">
-          <label className="fl-tiny-label">Unit</label>
-          <input className="form-input" placeholder="e.g. B$, %" value={settings.unit}
-            onChange={e => updateSettings({ unit: e.target.value })} />
+          <label className="fl-tiny-label">Alignment</label>
+          <div className="fl-tabs" style={{ marginTop: 4 }}>
+            {(['left', 'center', 'right'] as TextAlign[]).map(align => (
+              <button
+                key={align}
+                className={'fl-color-tab' + (settings.titleAlign === align ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ titleAlign: align })}
+                title={align.charAt(0).toUpperCase() + align.slice(1)}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}
+              >
+                {align === 'left' && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+                  </svg>
+                )}
+                {align === 'center' && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                  </svg>
+                )}
+                {align === 'right' && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Bold toggle */}
+        <div className="fl-field">
+          <label className="fl-tiny-label">Weight</label>
+          <div className="fl-tabs" style={{ marginTop: 4 }}>
+            <button
+              className={'fl-color-tab' + (!settings.titleBold ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ titleBold: false })}
+              style={{ flex: 1, fontWeight: 400 }}
+            >Normal</button>
+            <button
+              className={'fl-color-tab' + (settings.titleBold ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ titleBold: true })}
+              style={{ flex: 1, fontWeight: 700 }}
+            >Bold</button>
+          </div>
+        </div>
+
+        {/* Font size */}
+        <div className="fl-field">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+            <span className="fl-val-badge">{settings.titleFontSize}</span>
+          </div>
+          <input type="range" className="fl-slider" min={20} max={80} step={1}
+            value={settings.titleFontSize}
+            onChange={e => updateSettings({ titleFontSize: Number(e.target.value) })} />
+          <div className="fl-slider-ends"><span>Small</span><span>Large</span></div>
+        </div>
+
       </Section>
 
       {/* ════ Bars ════ */}
@@ -172,6 +219,11 @@ export function SettingsPanel() {
           <input type="number" className="form-input" min={3} max={20}
             value={settings.maxBars}
             onChange={e => updateSettings({ maxBars: Number(e.target.value) })} />
+        </div>
+        <div className="fl-field">
+          <label className="fl-tiny-label">Unit</label>
+          <input className="form-input" placeholder="e.g. B$, %" value={settings.unit}
+            onChange={e => updateSettings({ unit: e.target.value })} />
         </div>
       </Section>
 
