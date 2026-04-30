@@ -33,6 +33,7 @@ export function RaceChart() {
   const currentTimeInPeriod = useChartStore((s) => s.playback.currentTimeInPeriod);
   const isExporting = useChartStore((s) => s.isExporting);
   const periodsLen = useChartStore((s) => s.periods.length);
+  const settings = useChartStore((s) => s.settings);
   const { drawFrame, imgVersion } = useChartRenderer();
   const drawFrameRef = useRef(drawFrame);
   drawFrameRef.current = drawFrame;
@@ -80,7 +81,7 @@ export function RaceChart() {
       ctx.textBaseline = 'middle';
       ctx.fillText('Upload data to see chart preview', w / 2, h / 2);
     }
-  }, [isPlaying, currentPeriodIndex, currentTimeInPeriod, imgVersion, periodsLen]);
+  }, [isPlaying, currentPeriodIndex, currentTimeInPeriod, imgVersion, periodsLen, settings]);
 
   // Animation loop — canvas drawn directly in rAF, no React render on each frame
   useEffect(() => {

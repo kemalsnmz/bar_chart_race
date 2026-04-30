@@ -123,7 +123,14 @@ export function useChartRenderer() {
     const prevRankMap = new Map(fullPrev.map((d, i) => [d.name, i]));
     const currRankMap = new Map(fullCurr.map((d, i) => [d.name, i]));
 
-    const margin = { top: height * 0.15, right: width * 0.1, bottom: height * 0.05, left: width * 0.15 };
+    const baseRightMargin = width * 0.15;
+    const extraRightMargin = settings.imagePosition === 'right' ? (settings.imageWidth + (settings.imageMarginRight || 10) * 2) : 0;
+    const margin = { 
+      top: settings.titleVisible ? height * 0.15 : height * 0.05, 
+      right: baseRightMargin + extraRightMargin, 
+      bottom: height * 0.05, 
+      left: width * 0.15 
+    };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
     const slotHeight = chartHeight / settings.maxBars;
@@ -134,21 +141,23 @@ export function useChartRenderer() {
     const xScale = d3.scaleLinear().domain([0, maxVal]).range([0, chartWidth]);
 
     // Title
-    const titleSize = Math.round(height * (settings.titleFontSize / 1000));
-    const titleWeight = settings.titleBold ? 'bold' : '400';
-    ctx.fillStyle = textColor;
-    ctx.font = titleWeight + ' ' + titleSize + 'px Inter, sans-serif';
-    ctx.textBaseline = 'top';
-    const titleY = height * 0.04;
-    if (settings.titleAlign === 'center') {
-      ctx.textAlign = 'center';
-      ctx.fillText(settings.title, width / 2, titleY);
-    } else if (settings.titleAlign === 'right') {
-      ctx.textAlign = 'right';
-      ctx.fillText(settings.title, width * 0.95, titleY);
-    } else {
-      ctx.textAlign = 'left';
-      ctx.fillText(settings.title, width * 0.05, titleY);
+    if (settings.titleVisible) {
+      const titleSize = Math.round(height * (settings.titleFontSize / 1000));
+      const titleWeight = settings.titleBold ? 'bold' : '400';
+      ctx.fillStyle = settings.titleColor || textColor;
+      ctx.font = titleWeight + ' ' + titleSize + 'px Inter, sans-serif';
+      ctx.textBaseline = 'top';
+      const titleY = height * 0.04;
+      if (settings.titleAlign === 'center') {
+        ctx.textAlign = 'center';
+        ctx.fillText(settings.title, width / 2, titleY);
+      } else if (settings.titleAlign === 'right') {
+        ctx.textAlign = 'right';
+        ctx.fillText(settings.title, width * 0.95, titleY);
+      } else {
+        ctx.textAlign = 'left';
+        ctx.fillText(settings.title, width * 0.05, titleY);
+      }
     }
 
     // Period watermark
@@ -232,7 +241,7 @@ export function useChartRenderer() {
 
       // Draw Name
       if (settings.labelVisible) {
-        ctx.fillStyle = nameColor;
+        ctx.fillStyle = settings.labelColor || nameColor;
         ctx.textAlign = nameAlign;
         ctx.textBaseline = 'middle';
         ctx.fillText(d.name, nameX, y + barHeight / 2);

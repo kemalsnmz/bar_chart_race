@@ -76,7 +76,17 @@ export function SettingsPanel() {
         />
 
         {/* — Bars — */}
-        <SubHeading label="Bars" />
+        <div className="fl-sub-heading">
+          <span>Bars</span>
+          <div className="fl-sub-line" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <span className="fl-tiny-label" style={{ marginBottom: 0, whiteSpace: 'nowrap' }}>Opacity</span>
+            <input type="number" className="form-input spinner-visible" min={0.1} max={1.0} step={0.1}
+              value={settings.barOpacity}
+              onChange={e => updateSettings({ barOpacity: Number(e.target.value) })}
+              style={{ width: 52, textAlign: 'center', padding: '3px 4px' }} />
+          </div>
+        </div>
         <div className="fl-tabs">
           <ColorTab id="category" active={settings.colorMode === 'category'} onClick={m => updateSettings({ colorMode: m })}>By category</ColorTab>
           <ColorTab id="bar"      active={settings.colorMode === 'bar'}      onClick={m => updateSettings({ colorMode: m })}>By bar</ColorTab>
@@ -115,15 +125,40 @@ export function SettingsPanel() {
               value={settings.palette as PaletteName}
               onChange={p => updateSettings({ palette: p })}
             />
-            <div className="fl-field" style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
-              <input type="number" className="form-input spinner-visible" min={0.1} max={1.0} step={0.1}
-                value={settings.barOpacity}
-                onChange={e => updateSettings({ barOpacity: Number(e.target.value) })}
-                style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
-            </div>
           </div>
         )}
+
+        {/* — Title color — */}
+        <div className="fl-sub-heading">
+          <span>Title</span>
+          <div className="fl-sub-line" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {settings.titleColor && (
+              <button className="fl-color-tab" onClick={() => updateSettings({ titleColor: '' })}
+                style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
+            )}
+            <ColorPicker
+              value={settings.titleColor || '#000000'}
+              onChange={color => updateSettings({ titleColor: color })}
+            />
+          </div>
+        </div>
+
+        {/* — Label color — */}
+        <div className="fl-sub-heading">
+          <span>Label</span>
+          <div className="fl-sub-line" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {settings.labelColor && (
+              <button className="fl-color-tab" onClick={() => updateSettings({ labelColor: '' })}
+                style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
+            )}
+            <ColorPicker
+              value={settings.labelColor || '#000000'}
+              onChange={color => updateSettings({ labelColor: color })}
+            />
+          </div>
+        </div>
 
         {/* Single */}
         {settings.colorMode === 'single' && (
@@ -146,76 +181,85 @@ export function SettingsPanel() {
       {/* ════ Text ════ */}
       <Section title="Text">
 
-        <SubHeading label="Title" />
+        <div className="fl-sub-heading">
+          <span>Title</span>
+          <div className="fl-sub-line" />
+          <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+            <button className={'fl-color-tab' + (settings.titleVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ titleVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (!settings.titleVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ titleVisible: false })}>Off</button>
+          </div>
+        </div>
 
         {/* Title input */}
-        <div className="fl-field">
-          <input className="form-input" value={settings.title}
-            onChange={e => updateSettings({ title: e.target.value })}
-            placeholder="Chart title…" />
-        </div>
+            <div className="fl-field">
+              <input className="form-input" value={settings.title}
+                onChange={e => updateSettings({ title: e.target.value })}
+                placeholder="Chart title…" />
+            </div>
 
-        {/* Alignment */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Alignment</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
-            {(['left', 'center', 'right'] as TextAlign[]).map(align => (
-              <button
-                key={align}
-                className={'fl-color-tab' + (settings.titleAlign === align ? ' fl-color-tab-active' : '')}
-                onClick={() => updateSettings({ titleAlign: align })}
-                title={align.charAt(0).toUpperCase() + align.slice(1)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                {align === 'left' && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
-                  </svg>
-                )}
-                {align === 'center' && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-                  </svg>
-                )}
-                {align === 'right' && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
-                  </svg>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Alignment */}
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Alignment</label>
+              <div className="fl-tabs" style={{ margin: 0 }}>
+                {(['left', 'center', 'right'] as TextAlign[]).map(align => (
+                  <button
+                    key={align}
+                    className={'fl-color-tab' + (settings.titleAlign === align ? ' fl-color-tab-active' : '')}
+                    onClick={() => updateSettings({ titleAlign: align })}
+                    title={align.charAt(0).toUpperCase() + align.slice(1)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {align === 'left' && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/>
+                      </svg>
+                    )}
+                    {align === 'center' && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                      </svg>
+                    )}
+                    {align === 'right' && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Bold toggle */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
-            <button
-              className={'fl-color-tab' + (!settings.titleBold ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ titleBold: false })}
-              style={{ fontWeight: 400 }}
-            >Normal</button>
-            <button
-              className={'fl-color-tab' + (settings.titleBold ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ titleBold: true })}
-              style={{ fontWeight: 700 }}
-            >Bold</button>
-          </div>
-        </div>
+            {/* Bold toggle */}
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
+              <div className="fl-tabs" style={{ margin: 0 }}>
+                <button
+                  className={'fl-color-tab' + (!settings.titleBold ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ titleBold: false })}
+                  style={{ fontWeight: 400 }}
+                >Normal</button>
+                <button
+                  className={'fl-color-tab' + (settings.titleBold ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ titleBold: true })}
+                  style={{ fontWeight: 700 }}
+                >Bold</button>
+              </div>
+            </div>
 
-        {/* Font size */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
-          <input
-            type="number"
-            className="form-input spinner-visible"
-            min={20} max={80} step={1}
-            value={settings.titleFontSize}
-            onChange={e => updateSettings({ titleFontSize: Number(e.target.value) })}
-            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }}
-          />
-        </div>
+            {/* Font size */}
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+              <input
+                type="number"
+                className="form-input spinner-visible"
+                min={20} max={80} step={1}
+                value={settings.titleFontSize}
+                onChange={e => updateSettings({ titleFontSize: Number(e.target.value) })}
+                style={{ width: 64, textAlign: 'center', padding: '3px 4px' }}
+              />
+            </div>
 
       </Section>
 
@@ -302,38 +346,32 @@ export function SettingsPanel() {
       {/* ════ Label ════ */}
       <Section title="Label" defaultOpen={false}>
 
-        {/* Visible */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Visible</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
-            <button className={'fl-color-tab' + (settings.labelVisible ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ labelVisible: true })}>On</button>
-            <button className={'fl-color-tab' + (!settings.labelVisible ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ labelVisible: false })}>Off</button>
-          </div>
+        <div className="fl-sub-heading">
+          <span>Label</span>
+          <div className="fl-sub-line" />
         </div>
 
         {/* Font size */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
-          <input type="number" className="form-input spinner-visible" min={20} max={120} step={1}
-            value={settings.labelFontSize}
-            onChange={e => updateSettings({ labelFontSize: Number(e.target.value) })}
-            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
-        </div>
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+              <input type="number" className="form-input spinner-visible" min={20} max={120} step={1}
+                value={settings.labelFontSize}
+                onChange={e => updateSettings({ labelFontSize: Number(e.target.value) })}
+                style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+            </div>
 
-        {/* Weight */}
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
-            <button className={'fl-color-tab' + (!settings.labelBold ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ labelBold: false })}
-              style={{ fontWeight: 400 }}>Normal</button>
-            <button className={'fl-color-tab' + (settings.labelBold ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ labelBold: true })}
-              style={{ fontWeight: 700 }}>Bold</button>
-          </div>
-        </div>
+            {/* Weight */}
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Weight</label>
+              <div className="fl-tabs" style={{ margin: 0 }}>
+                <button className={'fl-color-tab' + (!settings.labelBold ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ labelBold: false })}
+                  style={{ fontWeight: 400 }}>Normal</button>
+                <button className={'fl-color-tab' + (settings.labelBold ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ labelBold: true })}
+                  style={{ fontWeight: 700 }}>Bold</button>
+              </div>
+            </div>
 
       </Section>
 

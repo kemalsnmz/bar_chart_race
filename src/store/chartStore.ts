@@ -18,6 +18,8 @@ export type ImagePosition = 'left' | 'inside' | 'right';
 
 export interface ChartSettings {
   title: string;
+  titleVisible: boolean;
+  titleColor: string;
   maxBars: number;
   durationMs: number;
   unit: string;
@@ -37,6 +39,7 @@ export interface ChartSettings {
   labelVisible: boolean;
   labelFontSize: number;
   labelBold: boolean;
+  labelColor: string;
   barEndShape: BarEndShape;
   imagePosition: ImagePosition;
   barThickness: number;
@@ -93,6 +96,8 @@ export const useChartStore = create<ChartStore>((set) => ({
 
   settings: {
     title: 'Bar Chart Race',
+    titleVisible: true,
+    titleColor: '',
     maxBars: 10,
     durationMs: 1000,
     unit: '',
@@ -112,6 +117,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
+    labelColor: '',
     barEndShape: 'round',
     imagePosition: 'left',
     barThickness: 80,
