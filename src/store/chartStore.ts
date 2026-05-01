@@ -1,6 +1,26 @@
 import { create } from 'zustand';
 import type { PaletteName } from '../utils/colorPalettes';
 
+const IMAGE_CACHE_KEY = 'chart_image_cache';
+
+function saveImageToCache(name: string, url: string) {
+  try {
+    const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+    if (url) cache[name] = url;
+    else delete cache[name];
+    localStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) { /* ignore */ }
+}
+
+function getImageFromCache(name: string): string | null {
+  try {
+    const cache = JSON.parse(localStorage.getItem(IMAGE_CACHE_KEY) || '{}');
+    return cache[name] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 export interface DataRow {
   name: string;
   value: number;
@@ -15,6 +35,8 @@ export type ImageSizing = 'fill' | 'fit' | 'stretch';
 export type ImageShape = 'rectangle' | 'circle';
 export type BarEndShape = 'round' | 'flat' | 'arrow';
 export type ImagePosition = 'left' | 'inside' | 'right';
+export type LabelPosition = 'left' | 'inside' | 'right';
+export type ChartLayout = 'horizontal' | 'vertical';
 
 export interface ChartSettings {
   title: string;
@@ -40,10 +62,34 @@ export interface ChartSettings {
   labelFontSize: number;
   labelBold: boolean;
   labelColor: string;
+  labelPosition: LabelPosition;
+  labelMargin: number;
   barEndShape: BarEndShape;
   imagePosition: ImagePosition;
   barThickness: number;
   barGap: number;
+  totalVisible: boolean;
+  totalOpacity: number;
+  totalMarginX: number;
+  totalMarginY: number;
+  timeVisible: boolean;
+  timeMonthVisible: boolean;
+  timeMonthFormat: 'text' | 'number';
+  timeAnimation: 'normal' | 'slide';
+  timeMarginX: number;
+  timeMarginY: number;
+  timeFontSize: number;
+  timeBold: boolean;
+  timeOpacity: number;
+  layout: ChartLayout;
+  backgroundImageUrl: string;
+  backgroundVideoUrl: string;
+  backgroundOpacity: number;
+  backgroundTint: number;
+  backgroundMarginTop: number;
+  backgroundMarginRight: number;
+  backgroundMarginBottom: number;
+  backgroundMarginLeft: number;
 }
 
 export interface PlaybackState {
@@ -99,7 +145,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     titleVisible: true,
     titleColor: '',
     maxBars: 10,
-    durationMs: 1000,
+    durationMs: 2000,
     unit: '',
     palette: 'vivid',
     backgroundColor: '#ffffff',
@@ -118,10 +164,34 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelFontSize: 60,
     labelBold: true,
     labelColor: '',
+    labelPosition: 'left',
+    labelMargin: 5,
     barEndShape: 'round',
-    imagePosition: 'left',
+    imagePosition: 'right',
     barThickness: 80,
-    barGap: 20,
+    barGap: 5,
+    totalVisible: true,
+    totalOpacity: 0.5,
+    totalMarginX: 0,
+    totalMarginY: 0,
+    timeVisible: true,
+    timeMonthVisible: false,
+    timeMonthFormat: 'text',
+    timeAnimation: 'normal',
+    timeMarginX: 0,
+    timeMarginY: 0,
+    timeFontSize: 12,
+    timeBold: true,
+    timeOpacity: 0.5,
+    layout: 'horizontal',
+    backgroundImageUrl: '',
+    backgroundVideoUrl: '',
+    backgroundOpacity: 1,
+    backgroundTint: 0,
+    backgroundMarginTop: 0,
+    backgroundMarginRight: 0,
+    backgroundMarginBottom: 0,
+    backgroundMarginLeft: 0,
   },
 
   playback: {
@@ -142,11 +212,17 @@ export const useChartStore = create<ChartStore>((set) => ({
   pendingCSV: null,
   setPendingCSV: (p) => set(() => ({ pendingCSV: p })),
 
-  setData: (data, periods) => set(() => ({
-    data, 
-    periods, 
-    entityColors: new Map() // Reset colors on new data
-  })),
+  setData: (data, periods) => set(() => {
+    const enrichedData = data.map(row => ({
+      ...row,
+      imageUrl: row.imageUrl || getImageFromCache(row.name) || undefined
+    }));
+    return {
+      data: enrichedData, 
+      periods, 
+      entityColors: new Map() // Reset colors on new data
+    };
+  }),
 
   updateSettings: (newSettings) => set((state) => ({
     settings: { ...state.settings, ...newSettings }
@@ -186,9 +262,12 @@ export const useChartStore = create<ChartStore>((set) => ({
     data: state.data.map(row => row.name === name ? { ...row, category } : row),
   })),
 
-  updateImageUrl: (name, imageUrl) => set((state) => ({
-    data: state.data.map(row => row.name === name ? { ...row, imageUrl } : row),
-  })),
+  updateImageUrl: (name, imageUrl) => set((state) => {
+    saveImageToCache(name, imageUrl);
+    return {
+      data: state.data.map(row => row.name === name ? { ...row, imageUrl } : row),
+    };
+  }),
 
   addPeriod: (newTime, insertAfter, insertBefore) => set((state) => {
     if (state.periods.includes(newTime)) return state;

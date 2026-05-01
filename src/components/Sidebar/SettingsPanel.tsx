@@ -7,7 +7,7 @@ import { ColorPicker } from './ColorPicker';
 import { PresetPaletteSelector } from './PresetPaletteSelector';
 
 // ── Collapsible section ────────────────────────────────
-function Section({ title, children, defaultOpen = true }: {
+function Section({ title, children, defaultOpen = false }: {
   title: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -87,6 +87,23 @@ export function SettingsPanel() {
               style={{ width: 52, textAlign: 'center', padding: '3px 4px' }} />
           </div>
         </div>
+
+        {/* — Chart Style — */}
+        <div className="fl-sub-heading" style={{ marginTop: 12 }}>
+          <span>Chart Style</span>
+          <div className="fl-sub-line" />
+          <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+            <button className={'fl-color-tab' + (settings.layout !== 'vertical' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ layout: 'horizontal' })}>Horizontal</button>
+            <button className={'fl-color-tab' + (settings.layout === 'vertical' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ layout: 'vertical' })}>Vertical</button>
+          </div>
+        </div>
+
+        <div className="fl-sub-heading" style={{ marginTop: 16 }}>
+          <span>Color Mode</span>
+          <div className="fl-sub-line" />
+        </div>
         <div className="fl-tabs">
           <ColorTab id="category" active={settings.colorMode === 'category'} onClick={m => updateSettings({ colorMode: m })}>By category</ColorTab>
           <ColorTab id="bar"      active={settings.colorMode === 'bar'}      onClick={m => updateSettings({ colorMode: m })}>By bar</ColorTab>
@@ -159,7 +176,6 @@ export function SettingsPanel() {
             />
           </div>
         </div>
-
         {/* Single */}
         {settings.colorMode === 'single' && (
           <div className="fl-color-body">
@@ -176,6 +192,128 @@ export function SettingsPanel() {
           </div>
         )}
 
+      </Section>
+
+      {/* ════ Background ════ */}
+      <Section title="Background Image">
+        <div className="fl-field">
+          <div style={{ display: 'flex', gap: '8px', marginBottom: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Image</label>
+            <input
+              className="form-input"
+              placeholder="https://..."
+              value={settings.backgroundImageUrl || ''}
+              onChange={e => updateSettings({ backgroundImageUrl: e.target.value, backgroundVideoUrl: '' })}
+              style={{ flex: 1 }}
+            />
+            <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center' }}>
+              Upload
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) updateSettings({ backgroundImageUrl: URL.createObjectURL(file), backgroundVideoUrl: '' });
+                }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0, alignSelf: 'center' }}>Video</label>
+            <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+              Upload video
+              <input
+                type="file"
+                accept="video/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) updateSettings({ backgroundVideoUrl: URL.createObjectURL(file), backgroundImageUrl: '' });
+                }}
+              />
+            </label>
+            {settings.backgroundVideoUrl && (
+              <span className="fl-tiny-label" style={{ marginBottom: 0, alignSelf: 'center', opacity: 0.6 }}>loaded</span>
+            )}
+          </div>
+
+          {(settings.backgroundImageUrl || settings.backgroundVideoUrl) && (
+            <button
+              className="fl-color-tab"
+              style={{ width: '100%', marginTop: 2 }}
+              onClick={() => updateSettings({
+                backgroundImageUrl: '',
+                backgroundVideoUrl: '',
+                backgroundOpacity: 1,
+                backgroundTint: 0,
+                backgroundMarginTop: 0,
+                backgroundMarginRight: 0,
+                backgroundMarginBottom: 0,
+                backgroundMarginLeft: 0,
+              })}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {(settings.backgroundImageUrl || settings.backgroundVideoUrl) && (
+          <>
+            <div className="fl-field">
+              <label className="fl-tiny-label">Opacity ({Math.round(settings.backgroundOpacity * 100)}%)</label>
+              <input type="range" min="0" max="1" step="0.05"
+                value={settings.backgroundOpacity}
+                onChange={e => updateSettings({ backgroundOpacity: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div className="fl-field">
+              <label className="fl-tiny-label">Dark Overlay Tint ({Math.round(settings.backgroundTint * 100)}%)</label>
+              <input type="range" min="0" max="1" step="0.05"
+                value={settings.backgroundTint}
+                onChange={e => updateSettings({ backgroundTint: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div className="fl-sub-heading" style={{ marginTop: 16 }}>
+              <span>Margins</span>
+              <div className="fl-sub-line" />
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="fl-field" style={{ marginBottom: 0 }}>
+                <label className="fl-tiny-label">Top</label>
+                <input className="form-input" type="number" 
+                  value={settings.backgroundMarginTop}
+                  onChange={e => updateSettings({ backgroundMarginTop: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="fl-field" style={{ marginBottom: 0 }}>
+                <label className="fl-tiny-label">Bottom</label>
+                <input className="form-input" type="number" 
+                  value={settings.backgroundMarginBottom}
+                  onChange={e => updateSettings({ backgroundMarginBottom: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="fl-field" style={{ marginBottom: 0 }}>
+                <label className="fl-tiny-label">Left</label>
+                <input className="form-input" type="number" 
+                  value={settings.backgroundMarginLeft}
+                  onChange={e => updateSettings({ backgroundMarginLeft: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="fl-field" style={{ marginBottom: 0 }}>
+                <label className="fl-tiny-label">Right</label>
+                <input className="form-input" type="number" 
+                  value={settings.backgroundMarginRight}
+                  onChange={e => updateSettings({ backgroundMarginRight: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </Section>
 
       {/* ════ Text ════ */}
@@ -260,6 +398,7 @@ export function SettingsPanel() {
                 style={{ width: 64, textAlign: 'center', padding: '3px 4px' }}
               />
             </div>
+
 
       </Section>
 
@@ -373,6 +512,37 @@ export function SettingsPanel() {
               </div>
             </div>
 
+        {/* Label Position */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Position</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button
+              className={'fl-color-tab' + (settings.labelPosition === 'left' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelPosition: 'left' })}>
+              Left
+            </button>
+            <button
+              className={'fl-color-tab' + (settings.labelPosition === 'inside' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelPosition: 'inside' })}>
+              Inside
+            </button>
+            <button
+              className={'fl-color-tab' + (settings.labelPosition === 'right' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ labelPosition: 'right' })}>
+              Right
+            </button>
+          </div>
+        </div>
+
+        {/* Label Margin */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Margin</label>
+          <input type="number" className="form-input spinner-visible" min={-100} max={200} step={1}
+            value={settings.labelMargin ?? 15}
+            onChange={e => updateSettings({ labelMargin: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
       </Section>
 
       {/* ════ Bars ════ */}
@@ -422,6 +592,137 @@ export function SettingsPanel() {
         </div>
       </Section>
 
+      {/* ════ Total Counter ════ */}
+      <Section title="Total Counter" defaultOpen={false}>
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Show Counter</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (settings.totalVisible !== false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ totalVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (settings.totalVisible === false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ totalVisible: false })}>Off</button>
+          </div>
+        </div>
+
+        {settings.totalVisible !== false && (
+          <>
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Margin</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>X</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={settings.totalMarginX ?? 0}
+                  onChange={e => updateSettings({ totalMarginX: Number(e.target.value) })}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>Y</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={settings.totalMarginY ?? 0}
+                  onChange={e => updateSettings({ totalMarginY: Number(e.target.value) })}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+              </div>
+            </div>
+
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
+              <input type="number" className="form-input spinner-visible" min={0.1} max={1.0} step={0.1}
+                value={settings.totalOpacity ?? 0.5}
+                onChange={e => updateSettings({ totalOpacity: Number(e.target.value) })}
+                style={{ width: 52, textAlign: 'center', padding: '3px 4px' }} />
+            </div>
+          </>
+        )}
+      </Section>
+
+      {/* ════ Time Counter ════ */}
+      <Section title="Time Counter" defaultOpen={false}>
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Show Counter</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (settings.timeVisible !== false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ timeVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (settings.timeVisible === false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ timeVisible: false })}>Off</button>
+          </div>
+        </div>
+
+        {settings.timeVisible !== false && (
+          <>
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Show Months</label>
+              <div className="fl-tabs" style={{ margin: 0 }}>
+                <button className={'fl-color-tab' + (settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ timeMonthVisible: true })}>On</button>
+                <button className={'fl-color-tab' + (!settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ timeMonthVisible: false })}>Off</button>
+              </div>
+            </div>
+
+            {settings.timeMonthVisible && (
+              <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Month Format</label>
+                <div className="fl-tabs" style={{ margin: 0 }}>
+                  <button className={'fl-color-tab' + (settings.timeMonthFormat === 'text' ? ' fl-color-tab-active' : '')}
+                    onClick={() => updateSettings({ timeMonthFormat: 'text' })}>Text (Jan)</button>
+                  <button className={'fl-color-tab' + (settings.timeMonthFormat === 'number' ? ' fl-color-tab-active' : '')}
+                    onClick={() => updateSettings({ timeMonthFormat: 'number' })}>Number (01)</button>
+                </div>
+              </div>
+            )}
+
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Style</label>
+              <div className="fl-tabs" style={{ margin: 0 }}>
+                <button className={'fl-color-tab' + (settings.timeAnimation === 'normal' ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ timeAnimation: 'normal' })}>Normal</button>
+                <button className={'fl-color-tab' + (settings.timeAnimation === 'slide' ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ timeAnimation: 'slide' })}>Slide</button>
+              </div>
+            </div>
+
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>Size</span>
+                <input type="number" className="form-input spinner-visible" step={1} min={10} max={100}
+                  value={settings.timeFontSize ?? 12}
+                  onChange={e => updateSettings({ timeFontSize: Number(e.target.value) })}
+                  style={{ width: 42, textAlign: 'center', padding: '3px 2px' }} />
+                <div className="fl-tabs" style={{ margin: 0 }}>
+                  <button className={'fl-color-tab' + (!settings.timeBold ? ' fl-color-tab-active' : '')}
+                    onClick={() => updateSettings({ timeBold: false })} style={{ fontWeight: 'normal', padding: '3px 6px' }}>Aa</button>
+                  <button className={'fl-color-tab' + (settings.timeBold ? ' fl-color-tab-active' : '')}
+                    onClick={() => updateSettings({ timeBold: true })} style={{ fontWeight: 'bold', padding: '3px 6px' }}>B</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Margin</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>X</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={settings.timeMarginX ?? 0}
+                  onChange={e => updateSettings({ timeMarginX: Number(e.target.value) })}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>Y</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={settings.timeMarginY ?? 0}
+                  onChange={e => updateSettings({ timeMarginY: Number(e.target.value) })}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+              </div>
+            </div>
+
+            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
+              <input type="number" className="form-input spinner-visible" min={0.1} max={1.0} step={0.1}
+                value={settings.timeOpacity ?? 0.5}
+                onChange={e => updateSettings({ timeOpacity: Number(e.target.value) })}
+                style={{ width: 52, textAlign: 'center', padding: '3px 4px' }} />
+            </div>
+          </>
+        )}
+      </Section>
+
       {/* ════ Animation ════ */}
       <Section title="Animation" defaultOpen={false}>
         <div className="fl-field">
@@ -429,7 +730,7 @@ export function SettingsPanel() {
             <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Duration per period</label>
             <span className="fl-val-badge">{settings.durationMs} ms</span>
           </div>
-          <input type="range" className="fl-slider" min={300} max={3000} step={100}
+          <input type="range" className="fl-slider" min={500} max={6000} step={100}
             value={settings.durationMs}
             onChange={e => updateSettings({ durationMs: Number(e.target.value) })} />
           <div className="fl-slider-ends"><span>Fast</span><span>Slow</span></div>
