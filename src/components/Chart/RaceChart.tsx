@@ -1,12 +1,13 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import { useChartRenderer } from '../../hooks/useChartRenderer';
 
-function getCanvasSize(container: HTMLDivElement) {
+function getCanvasSize(container: HTMLDivElement, ratio: '16:9' | '9:16' | '1:1') {
   const rect = container.getBoundingClientRect();
+  const [rw, rh] = ratio === '16:9' ? [16, 9] : ratio === '9:16' ? [9, 16] : [1, 1];
   let w = rect.width;
-  let h = w * (9 / 16);
-  if (h > rect.height) { h = rect.height; w = h * (16 / 9); }
+  let h = w * (rh / rw);
+  if (h > rect.height) { h = rect.height; w = h * (rw / rh); }
   return { w, h };
 }
 
@@ -27,6 +28,7 @@ export function RaceChart() {
   const rafRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
   const currentPeriodIndex = useChartStore((s) => s.playback.currentPeriodIndex);
@@ -34,9 +36,40 @@ export function RaceChart() {
   const isExporting = useChartStore((s) => s.isExporting);
   const periodsLen = useChartStore((s) => s.periods.length);
   const settings = useChartStore((s) => s.settings);
+  const canvasRatio = useChartStore((s) => s.exportSettings.canvasRatio);
+  // Re-fit canvas when ratio changes
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+    const { w, h } = getCanvasSize(container, canvasRatio);
+    sizeRef.current = { w, h };
+    setupCanvas(canvas, w, h);
+    const { periods, playback } = useChartStore.getState();
+    if (periods.length > 0) {
+      const ctx = canvas.getContext('2d')!;
+      drawFrameRef.current(ctx, w, h, playback.currentPeriodIndex, playback.currentTimeInPeriod);
+    }
+  }, [canvasRatio]);
   const { drawFrame, imgVersion } = useChartRenderer();
   const drawFrameRef = useRef(drawFrame);
   drawFrameRef.current = drawFrame;
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(console.error);
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // Resize observer — keeps canvas dimensions correct
   useEffect(() => {
@@ -45,10 +78,10 @@ export function RaceChart() {
     if (!container || !canvas) return;
 
     const observer = new ResizeObserver(() => {
-      const { w, h } = getCanvasSize(container);
+      const ratio = useChartStore.getState().exportSettings.canvasRatio;
+      const { w, h } = getCanvasSize(container, ratio);
       sizeRef.current = { w, h };
       setupCanvas(canvas, w, h);
-      // Redraw current frame after resize
       const { periods, playback } = useChartStore.getState();
       if (periods.length > 0) {
         const ctx = canvas.getContext('2d')!;
@@ -118,7 +151,7 @@ export function RaceChart() {
           t = 0;
         }
 
-        drawFrameRef.current(ctx, w, h, idx, t);
+        drawFrameRef.current(ctx, w, h, idx, t, delta);
       }
 
       updatePlayback({ currentPeriodIndex: idx, currentTimeInPeriod: t });
@@ -132,14 +165,47 @@ export function RaceChart() {
   }, [isPlaying]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <canvas ref={canvasRef} />
+    <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', backgroundColor: isFullscreen ? (settings.backgroundColor || '#ffffff') : '#f0f2f5' }}>
+      <canvas ref={canvasRef} style={{ boxShadow: isFullscreen ? 'none' : '0 8px 24px rgba(0,0,0,0.08)', maxWidth: '100%', maxHeight: '100%' }} />
       {isExporting && (
         <div className="rec-indicator">
           <div className="rec-dot" />
           <span>REC</span>
         </div>
       )}
+      <button 
+        onClick={toggleFullscreen}
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          right: 16,
+          background: 'rgba(0,0,0,0.3)',
+          color: 'white',
+          border: 'none',
+          borderRadius: 6,
+          padding: '8px',
+          cursor: 'pointer',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(4px)',
+          transition: 'background 0.2s'
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'}
+        title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+      >
+        {isFullscreen ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        )}
+      </button>
     </div>
   );
 }

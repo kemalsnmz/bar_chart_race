@@ -7,6 +7,7 @@ import { formatValue } from '../utils/formatValue';
 
 const imageCache = new Map<string, HTMLImageElement | null>();
 
+
 let bgVideoEl: HTMLVideoElement | null = null;
 let bgVideoSrc = '';
 
@@ -64,6 +65,18 @@ function drawImageInBox(
   ctx.restore();
 }
 
+function applyEasing(t: number, easing: string): number {
+  switch (easing) {
+    case 'ease-out':    return 1 - Math.pow(1 - t, 3);
+    case 'ease-in-out': return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    case 'spring': {
+      const c1 = 1.70158, c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+    default: return t;
+  }
+}
+
 function getTextColor(hex: string): string {
   const c = hex.replace('#', '').padEnd(6, '0');
   const r = parseInt(c.slice(0, 2), 16);
@@ -82,7 +95,8 @@ export function useChartRenderer() {
     physicalWidth: number,
     physicalHeight: number,
     periodIndex: number,
-    t: number
+    t: number,
+    _deltaMs: number = 0
   ) => {
     const isVertical = settings.layout === 'vertical';
 
@@ -153,13 +167,15 @@ export function useChartRenderer() {
     const currentPeriod = periods[periodIndex];
     const prevPeriod = periodIndex > 0 ? periods[periodIndex - 1] : currentPeriod;
 
+    const et = applyEasing(t, settings.easing ?? 'ease-out');
+
     const prevDataMap = new Map(data.filter(d => d.time === prevPeriod).map(d => [d.name, d.value]));
     const currDataMap = new Map(data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value]));
     const allEntities = new Set([...prevDataMap.keys(), ...currDataMap.keys()]);
 
     const interpolatedData: { name: string; value: number }[] = [];
     for (const name of allEntities) {
-      const val = interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, t);
+      const val = interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, et);
       interpolatedData.push({ name, value: val });
     }
 
@@ -171,7 +187,7 @@ export function useChartRenderer() {
     const prevRankMap = new Map(fullPrev.map((d, i) => [d.name, i]));
     const currRankMap = new Map(fullCurr.map((d, i) => [d.name, i]));
 
-    let margin;
+    let margin: { top: number; right: number; bottom: number; left: number };
     if (isVertical) {
       margin = {
         top: settings.titleVisible ? physicalHeight * 0.15 : physicalHeight * 0.05,
@@ -180,13 +196,16 @@ export function useChartRenderer() {
         left: physicalWidth * 0.05
       };
     } else {
-      const baseRightMargin = physicalWidth * 0.15;
+      const isPortrait = physicalWidth < physicalHeight;
+      const leftPct  = isPortrait ? 0.28 : 0.15;
+      const rightPct = isPortrait ? 0.20 : 0.15;
+      const topPct   = isPortrait ? 0.05 : 0.10;
       const extraRightMargin = settings.imagePosition === 'right' ? (settings.imageWidth + (settings.imageMarginRight || 10) * 2) : 0;
-      margin = { 
-        top: settings.titleVisible ? physicalHeight * 0.15 : physicalHeight * 0.05, 
-        right: baseRightMargin + extraRightMargin, 
-        bottom: physicalHeight * 0.05, 
-        left: physicalWidth * 0.15 
+      margin = {
+        top: settings.titleVisible ? physicalHeight * topPct : physicalHeight * 0.03,
+        right: physicalWidth * rightPct + extraRightMargin,
+        bottom: physicalHeight * 0.04,
+        left: physicalWidth * leftPct,
       };
     }
 
@@ -225,7 +244,7 @@ export function useChartRenderer() {
     // Period watermark
     if (settings.timeVisible !== false) {
       ctx.fillStyle = textColor;
-      const fontSizePx = Math.round(physicalHeight * ((settings.timeFontSize ?? 22) / 100));
+      const fontSizePx = Math.round(Math.min(physicalWidth, physicalHeight) * ((settings.timeFontSize ?? 22) / 100));
       const fontWeight = settings.timeBold !== false ? 'bold' : 'normal';
       ctx.font = `${fontWeight} ${fontSizePx}px Inter, sans-serif`;
       ctx.textAlign = 'right';
@@ -325,9 +344,107 @@ export function useChartRenderer() {
       ctx.restore();
     }
 
+    // Watermark
+    if (settings.watermarkText) {
+      const wSize = Math.round(physicalHeight * (settings.watermarkFontSize / 1000));
+      ctx.font = `700 ${wSize}px Inter, sans-serif`;
+      ctx.globalAlpha = settings.watermarkOpacity;
+      ctx.fillStyle = textColor;
+      const pad = wSize * 0.8;
+      const pos = settings.watermarkPosition;
+      ctx.textBaseline = pos.startsWith('top') ? 'top' : 'bottom';
+      ctx.textAlign   = pos.endsWith('right') ? 'right' : 'left';
+      const wx = pos.endsWith('right') ? physicalWidth - pad : pad;
+      const wy = pos.startsWith('top')  ? pad : physicalHeight - pad;
+      ctx.fillText(settings.watermarkText, wx, wy);
+      ctx.globalAlpha = 1;
+    }
+
+    // Ticker — framed box, right side, just above total counter
+    if (settings.tickerVisible) {
+      const curIdx = periods.indexOf(currentPeriod);
+      const activeEntry = (settings.tickerEntries ?? []).find(e => {
+        const fi = periods.indexOf(e.from);
+        const ti = periods.indexOf(e.to);
+        if (fi === -1 || ti === -1) return false;
+        const [s, en] = fi <= ti ? [fi, ti] : [ti, fi];
+        return curIdx >= s && curIdx <= en;
+      });
+      const text = activeEntry?.text ?? '';
+      if (text) {
+        // Fade only at range boundaries; middle periods are fully visible
+        let fadeAlpha = 1;
+        if (activeEntry) {
+          const fi = periods.indexOf(activeEntry.from);
+          const ti = periods.indexOf(activeEntry.to);
+          const [rs, re] = fi <= ti ? [fi, ti] : [ti, fi];
+          if (rs === re) {
+            if (t < 0.2) fadeAlpha = t / 0.2;
+            else if (t > 0.8) fadeAlpha = (1 - t) / 0.2;
+          } else if (curIdx === rs) {
+            fadeAlpha = t < 0.2 ? t / 0.2 : 1;
+          } else if (curIdx === re) {
+            fadeAlpha = t > 0.8 ? (1 - t) / 0.2 : 1;
+          }
+        }
+
+        const th = settings.tickerHeight;
+        const mb = settings.tickerMarginBottom ?? 0;
+        const mx = settings.tickerMarginX ?? 0;
+        const fontSize = Math.round(physicalHeight * (settings.tickerFontSize / 175));
+        const padX = fontSize * 0.9;
+        const radius = th * 0.25;
+
+        // Measure text, build box width capped at 45% canvas
+        ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+        const rawTextW = ctx.measureText(text).width;
+        const boxW = Math.min(rawTextW + padX * 2, physicalWidth * 0.45);
+
+        // Total counter Y anchor
+        const totalY = isVertical
+          ? ((settings.timeVisible !== false) ? physicalHeight * 0.28 : physicalHeight * 0.05)
+          : ((settings.timeVisible !== false) ? physicalHeight * 0.73 : physicalHeight * 0.95);
+
+        const boxH = th;
+        const boxX = physicalWidth * 0.95 - boxW - mx;
+        const boxY = totalY - boxH - 10 - mb;
+
+        ctx.save();
+
+        // Background fill
+        ctx.globalAlpha = settings.tickerBgOpacity * fadeAlpha;
+        ctx.fillStyle = settings.tickerBgColor;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+        ctx.fill();
+
+        // Border
+        ctx.globalAlpha = 0.18 * fadeAlpha;
+        ctx.strokeStyle = settings.tickerTextColor;
+        ctx.lineWidth = Math.max(1, physicalWidth / 960);
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+        ctx.stroke();
+
+        // Clip text inside box
+        ctx.beginPath();
+        ctx.roundRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4, radius);
+        ctx.clip();
+
+        // Text
+        ctx.globalAlpha = fadeAlpha;
+        ctx.fillStyle = settings.tickerTextColor;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2);
+
+        ctx.restore();
+      }
+    }
+
     // Bars
     topData.forEach((d) => {
-      const rank = interpolate(prevRankMap.get(d.name) ?? settings.maxBars, currRankMap.get(d.name) ?? settings.maxBars, t);
+      const rank = interpolate(prevRankMap.get(d.name) ?? settings.maxBars, currRankMap.get(d.name) ?? settings.maxBars, et);
       if (rank >= settings.maxBars) return;
 
       const color = colorMap.get(d.name) ?? '#6c63ff';

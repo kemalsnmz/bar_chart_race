@@ -69,13 +69,14 @@ export function useVideoExporter() {
 
     const framesPerPeriod = Math.floor((settings.durationMs / 1000) * fps);
     const totalFrames = (periods.length - 1) * framesPerPeriod;
+    const deltaMs = 1000 / fps;
 
     let currentFrame = 0;
 
     for (let p = 0; p < periods.length - 1; p++) {
       for (let f = 0; f < framesPerPeriod; f++) {
         const t = f / framesPerPeriod;
-        drawFrame(ctx, width, height, p, t);
+        drawFrame(ctx, width, height, p, t, deltaMs);
 
         await new Promise((r) => setTimeout(r, 1000 / fps));
 
@@ -84,7 +85,7 @@ export function useVideoExporter() {
       }
     }
 
-    drawFrame(ctx, width, height, periods.length - 1, 1);
+    drawFrame(ctx, width, height, periods.length - 1, 1, deltaMs);
     await new Promise((r) => setTimeout(r, 1000 / fps));
 
     mediaRecorder.stop();

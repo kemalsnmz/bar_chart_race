@@ -38,12 +38,19 @@ export type ImagePosition = 'left' | 'inside' | 'right';
 export type LabelPosition = 'left' | 'inside' | 'right';
 export type ChartLayout = 'horizontal' | 'vertical';
 
+export interface TickerEntry {
+  text: string;
+  from: string;
+  to: string;
+}
+
 export interface ChartSettings {
   title: string;
   titleVisible: boolean;
   titleColor: string;
   maxBars: number;
   durationMs: number;
+  easing: 'linear' | 'ease-out' | 'ease-in-out' | 'spring';
   unit: string;
   palette: PaletteName;
   backgroundColor: string;
@@ -90,6 +97,20 @@ export interface ChartSettings {
   backgroundMarginRight: number;
   backgroundMarginBottom: number;
   backgroundMarginLeft: number;
+  watermarkText: string;
+  watermarkPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  watermarkOpacity: number;
+  watermarkFontSize: number;
+  tickerVisible: boolean;
+  tickerEntries: TickerEntry[];
+  tickerSpeed: number;
+  tickerFontSize: number;
+  tickerBgColor: string;
+  tickerBgOpacity: number;
+  tickerTextColor: string;
+  tickerHeight: number;
+  tickerMarginBottom: number;
+  tickerMarginX: number;
 }
 
 export interface PlaybackState {
@@ -102,6 +123,7 @@ export interface PlaybackState {
 export interface ExportSettings {
   resolution: '1080p' | '4k';
   fps: number;
+  canvasRatio: '16:9' | '9:16' | '1:1';
 }
 
 interface ChartStore {
@@ -146,6 +168,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     titleColor: '',
     maxBars: 10,
     durationMs: 2000,
+    easing: 'linear',
     unit: '',
     palette: 'vivid',
     backgroundColor: '#ffffff',
@@ -167,13 +190,13 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelPosition: 'left',
     labelMargin: 5,
     barEndShape: 'round',
-    imagePosition: 'right',
+    imagePosition: 'inside',
     barThickness: 80,
     barGap: 5,
     totalVisible: true,
     totalOpacity: 0.5,
     totalMarginX: 0,
-    totalMarginY: 0,
+    totalMarginY: 30,
     timeVisible: true,
     timeMonthVisible: false,
     timeMonthFormat: 'text',
@@ -192,6 +215,20 @@ export const useChartStore = create<ChartStore>((set) => ({
     backgroundMarginRight: 0,
     backgroundMarginBottom: 0,
     backgroundMarginLeft: 0,
+    watermarkText: '',
+    watermarkPosition: 'bottom-right',
+    watermarkOpacity: 0.7,
+    watermarkFontSize: 20,
+    tickerVisible: false,
+    tickerEntries: [{ text: '', from: '', to: '' }],
+    tickerSpeed: 80,
+    tickerFontSize: 14,
+    tickerBgColor: '#ffffff',
+    tickerBgOpacity: 1,
+    tickerTextColor: '#000000',
+    tickerHeight: 36,
+    tickerMarginBottom: 0,
+    tickerMarginX: 0,
   },
 
   playback: {
@@ -204,6 +241,7 @@ export const useChartStore = create<ChartStore>((set) => ({
   exportSettings: {
     resolution: '1080p',
     fps: 30,
+    canvasRatio: '16:9',
   },
 
   isExporting: false,

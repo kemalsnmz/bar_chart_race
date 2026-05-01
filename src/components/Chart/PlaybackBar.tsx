@@ -2,10 +2,19 @@ import { useChartStore } from '../../store/chartStore';
 import { usePlayback } from '../../hooks/usePlayback';
 
 export function PlaybackBar() {
-  const { periods, playback } = useChartStore();
+  const { periods, playback, settings } = useChartStore();
   const { togglePlay, seek, setSpeed } = usePlayback();
 
   if (periods.length === 0) return null;
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const totalSeconds = (periods.length * settings.durationMs) / 1000;
+  const currentSeconds = ((playback.currentPeriodIndex + playback.currentTimeInPeriod) * settings.durationMs) / 1000;
 
   return (
     <div className="playback-bar">
@@ -29,6 +38,10 @@ export function PlaybackBar() {
         )}
       </button>
 
+      <div style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--text-secondary, #666)' }}>
+        {formatTime(currentSeconds)} / {formatTime(totalSeconds)}
+      </div>
+
       <div className="timeline">
         <input
           type="range"
@@ -45,7 +58,7 @@ export function PlaybackBar() {
       </div>
 
       <div className="speed-group">
-        {[0.5, 1, 2, 4].map((s) => (
+        {[0.25, 0.5, 1, 2, 4].map((s) => (
           <button
             key={s}
             onClick={() => setSpeed(s)}

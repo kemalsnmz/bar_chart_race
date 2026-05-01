@@ -8,12 +8,14 @@ import { useCSVParser } from './hooks/useCSVParser';
 import { sampleData, sampleMeta } from './utils/sampleData';
 import { useChartStore } from './store/chartStore';
 
+const RATIOS = ['16:9', '9:16', '1:1'] as const;
+
 type Tab = 'preview' | 'data';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const { parseCSV } = useCSVParser();
-  const { setData, data, updateSettings } = useChartStore();
+  const { setData, data, updateSettings, exportSettings, updateExportSettings } = useChartStore();
 
   useEffect(() => {
     if (data.length === 0) {
@@ -66,6 +68,24 @@ function App() {
         </nav>
 
         <div className="top-bar-space" />
+
+        {/* Canvas ratio buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>Format</span>
+          <div className="tab-group">
+            {RATIOS.map(r => (
+              <button
+                key={r}
+                onClick={() => updateExportSettings({ canvasRatio: r })}
+                className={'tab-btn' + (exportSettings.canvasRatio === r ? ' active' : '')}
+                style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
+              >{r}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="top-bar-space" />
+
         <span className="version-badge">v1.0</span>
       </header>
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, ImagePosition } from '../../store/chartStore';
+import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, ImagePosition, TickerEntry } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -49,7 +49,7 @@ function ColorTab({ id, active, onClick, children }: {
 
 // ── Main panel ─────────────────────────────────────────
 export function SettingsPanel() {
-  const { settings, updateSettings, data } = useChartStore();
+  const { settings, updateSettings, data, exportSettings, updateExportSettings, periods } = useChartStore();
 
   const allCategories = [...new Set(data.map(d => d.category ?? '(no category)'))];
 
@@ -64,6 +64,7 @@ export function SettingsPanel() {
         </svg>
         <span>Settings</span>
       </div>
+
 
       {/* ════ Color section ════ */}
       <Section title="Color">
@@ -317,9 +318,9 @@ export function SettingsPanel() {
       </Section>
 
       {/* ════ Text ════ */}
-      <Section title="Text">
+      <Section title="Header">
 
-        <div className="fl-sub-heading">
+        <div className="fl-sub-heading" style={{ marginBottom: 4 }}>
           <span>Title</span>
           <div className="fl-sub-line" />
           <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
@@ -331,7 +332,7 @@ export function SettingsPanel() {
         </div>
 
         {/* Title input */}
-            <div className="fl-field">
+            <div className="fl-field" style={{ marginBottom: 4 }}>
               <input className="form-input" value={settings.title}
                 onChange={e => updateSettings({ title: e.target.value })}
                 placeholder="Chart title…" />
@@ -735,6 +736,210 @@ export function SettingsPanel() {
             onChange={e => updateSettings({ durationMs: Number(e.target.value) })} />
           <div className="fl-slider-ends"><span>Fast</span><span>Slow</span></div>
         </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Easing</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            {([
+              { value: 'linear',       label: 'Linear' },
+              { value: 'ease-out',     label: 'Ease out' },
+              { value: 'ease-in-out',  label: 'Ease in-out' },
+              { value: 'spring',       label: 'Spring' },
+            ] as { value: typeof settings.easing; label: string }[]).map(opt => (
+              <button key={opt.value}
+                className={'fl-color-tab' + (settings.easing === opt.value ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ easing: opt.value })}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ════ Watermark ════ */}
+      <Section title="Watermark" defaultOpen={false}>
+
+        {/* Text */}
+        <div className="fl-field">
+          <label className="fl-tiny-label">Channel name / text</label>
+          <input className="form-input" placeholder="@kanalım"
+            value={settings.watermarkText}
+            onChange={e => updateSettings({ watermarkText: e.target.value })} />
+        </div>
+
+        {/* Position */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Position</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+            {([
+              { value: 'top-left',     label: '↖' },
+              { value: 'top-right',    label: '↗' },
+              { value: 'bottom-left',  label: '↙' },
+              { value: 'bottom-right', label: '↘' },
+            ] as { value: typeof settings.watermarkPosition; label: string }[]).map(opt => (
+              <button key={opt.value}
+                className={'fl-color-tab' + (settings.watermarkPosition === opt.value ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ watermarkPosition: opt.value })}
+                style={{ fontSize: 16 }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Opacity */}
+        <div className="fl-field">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
+            <span className="fl-val-badge">{Math.round(settings.watermarkOpacity * 100)}%</span>
+          </div>
+          <input type="range" className="fl-slider" min={0.1} max={1} step={0.05}
+            value={settings.watermarkOpacity}
+            onChange={e => updateSettings({ watermarkOpacity: parseFloat(e.target.value) })} />
+        </div>
+
+        {/* Font size */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+          <input type="number" className="form-input spinner-visible" min={10} max={80} step={1}
+            value={settings.watermarkFontSize}
+            onChange={e => updateSettings({ watermarkFontSize: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+      </Section>
+
+      {/* ════ News Ticker ════ */}
+      <Section title="News Ticker" defaultOpen={false}>
+
+        {/* On/Off */}
+        <div className="fl-sub-heading">
+          <span>Visible</span>
+          <div className="fl-sub-line" />
+          <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+            <button className={'fl-color-tab' + (settings.tickerVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ tickerVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (!settings.tickerVisible ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ tickerVisible: false })}>Off</button>
+          </div>
+        </div>
+
+        {/* Margins — always visible */}
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Margin</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>Bottom</span>
+            <input type="number" className="form-input spinner-visible" step={2}
+              value={settings.tickerMarginBottom}
+              onChange={e => updateSettings({ tickerMarginBottom: Number(e.target.value) })}
+              style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary, #666)' }}>X</span>
+            <input type="number" className="form-input spinner-visible" step={2}
+              value={settings.tickerMarginX}
+              onChange={e => updateSettings({ tickerMarginX: Number(e.target.value) })}
+              style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+          </div>
+        </div>
+
+        {/* Ticker entries */}
+        <div className="fl-field" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(settings.tickerEntries ?? []).map((entry: TickerEntry, i: number) => (
+            <div key={i} style={{ background: 'var(--bg-secondary, #f5f5f5)', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Text row */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                <input
+                  className="form-input"
+                  placeholder="ticker text…"
+                  value={entry.text}
+                  onChange={e => {
+                    const updated = [...(settings.tickerEntries ?? [])];
+                    updated[i] = { ...updated[i], text: e.target.value };
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 6px', fontSize: 12 }}
+                />
+                <button
+                  onClick={() => {
+                    const updated = (settings.tickerEntries ?? []).filter((_: TickerEntry, j: number) => j !== i);
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #aaa)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
+                  title="Remove"
+                >×</button>
+              </div>
+              {/* From / To row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>FROM</span>
+                <select className="form-input" value={entry.from}
+                  onChange={e => {
+                    const updated = [...(settings.tickerEntries ?? [])];
+                    updated[i] = { ...updated[i], from: e.target.value };
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>TO</span>
+                <select className="form-input" value={entry.to}
+                  onChange={e => {
+                    const updated = [...(settings.tickerEntries ?? [])];
+                    updated[i] = { ...updated[i], to: e.target.value };
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+
+          {/* Add button */}
+          <button
+            className="fl-color-tab"
+            style={{ width: '100%', padding: '6px', fontSize: 18, fontWeight: 400 }}
+            onClick={() => {
+              updateSettings({ tickerEntries: [...(settings.tickerEntries ?? []), { text: '', from: '', to: '' }] });
+            }}
+          >+</button>
+        </div>
+
+        {/* Style settings */}
+        <SubHeading label="Style" />
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+          <input type="number" className="form-input spinner-visible" min={8} max={60} step={1}
+            value={settings.tickerFontSize}
+            onChange={e => updateSettings({ tickerFontSize: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Height</label>
+          <input type="number" className="form-input spinner-visible" min={16} max={120} step={2}
+            value={settings.tickerHeight}
+            onChange={e => updateSettings({ tickerHeight: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Background</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ColorPicker value={settings.tickerBgColor} onChange={c => updateSettings({ tickerBgColor: c })} />
+            <input type="number" className="form-input spinner-visible" min={0} max={1} step={0.05}
+              value={settings.tickerBgOpacity}
+              onChange={e => updateSettings({ tickerBgOpacity: parseFloat(e.target.value) })}
+              style={{ width: 52, textAlign: 'center', padding: '3px 4px' }} />
+          </div>
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Text color</label>
+          <ColorPicker value={settings.tickerTextColor} onChange={c => updateSettings({ tickerTextColor: c })} />
+        </div>
+
       </Section>
 
     </div>

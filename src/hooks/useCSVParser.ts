@@ -63,23 +63,52 @@ export function useCSVParser() {
           if (!results.meta.fields) return reject('No headers found');
           const columns = results.meta.fields;
 
-          const { name: nameCol, value: valCol, time: timeCol, image: imageCol } =
-            mapping || autoDetectMapping(columns);
-
           const rawData = results.data as Record<string, unknown>[];
           const data: DataRow[] = [];
           const periodSet = new Set<string>();
 
-          for (const row of rawData) {
-            if (row[nameCol] && row[valCol] !== undefined && row[timeCol]) {
-              const timeStr = String(row[timeCol]);
-              data.push({
-                name: String(row[nameCol]),
-                value: Number(row[valCol]),
-                time: timeStr,
-                imageUrl: imageCol && row[imageCol] ? String(row[imageCol]) : undefined,
-              });
-              periodSet.add(timeStr);
+          // Auto-detect wide format: if we have > 3 columns and no explicit "value" or "time" column headers
+          const hasExplicitValueOrTime = columns.some(c => /value|gdp|amount|total|count|score|year|date|time|period/i.test(c));
+          const isWideFormat = columns.length >= 4 && !hasExplicitValueOrTime;
+
+          if (isWideFormat) {
+            // Wide format: A=Name, B=Category, C=ImageUrl, D...=Periods
+            const nameC = columns[0];
+            const catC = columns[1];
+            const imgC = columns[2];
+            const timeCols = columns.slice(3); // from D column onwards
+
+            for (const row of rawData) {
+              if (row[nameC]) {
+                for (const tCol of timeCols) {
+                  if (row[tCol] !== undefined && row[tCol] !== null && row[tCol] !== '') {
+                    const timeStr = String(tCol);
+                    data.push({
+                      name: String(row[nameC]),
+                      value: Number(row[tCol]),
+                      time: timeStr,
+                      category: row[catC] ? String(row[catC]) : undefined,
+                      imageUrl: row[imgC] ? String(row[imgC]) : undefined,
+                    });
+                    periodSet.add(timeStr);
+                  }
+                }
+              }
+            }
+          } else {
+            // Long format
+            const { name: nameCol, value: valCol, time: timeCol, image: imageCol } = mapping || autoDetectMapping(columns);
+            for (const row of rawData) {
+              if (row[nameCol] && row[valCol] !== undefined && row[timeCol]) {
+                const timeStr = String(row[timeCol]);
+                data.push({
+                  name: String(row[nameCol]),
+                  value: Number(row[valCol]),
+                  time: timeStr,
+                  imageUrl: imageCol && row[imageCol] ? String(row[imageCol]) : undefined,
+                });
+                periodSet.add(timeStr);
+              }
             }
           }
 
