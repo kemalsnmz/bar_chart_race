@@ -27,6 +27,14 @@ function getClipVideo(url: string): HTMLVideoElement {
   return clipVideoCache.get(url)!;
 }
 
+function formatGridTick(value: number): string {
+  if (value >= 1e12) { const v = value / 1e12; return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + 'T'; }
+  if (value >= 1e9)  { const v = value / 1e9;  return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + 'B'; }
+  if (value >= 1e6)  { const v = value / 1e6;  return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + 'M'; }
+  if (value >= 1e3)  { const v = value / 1e3;  return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + 'K'; }
+  return String(Math.round(value));
+}
+
 function clipFadeAlpha(
   curIdx: number,
   fi: number,
@@ -518,23 +526,25 @@ export function useChartRenderer() {
       }
 
       if (settings.gridLabelVisible !== false) {
-        ctx.font = `700 ${labelSize}px Inter, sans-serif`;
+        const labelSize2 = Math.round(physicalHeight * 0.020);
+        ctx.font = `700 ${labelSize2}px Inter, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        const labelY = margin.top + 4;
-        const padX = labelSize * 0.5;
-        const padY = labelSize * 0.25;
+        ctx.textBaseline = 'bottom';
+        const labelY = physicalHeight - margin.bottom - 4;
+        const padX = labelSize2 * 0.5;
+        const padY = labelSize2 * 0.25;
 
         for (const tick of ticks) {
           const tx = margin.left + xScale(tick);
-          const label = formatValue(tick) + (settings.unit ? ' ' + settings.unit : '');
+          const label = formatGridTick(tick);
           const tw = ctx.measureText(label).width;
 
           // pill background for readability
+          const labelSize2 = Math.round(physicalHeight * 0.020);
           ctx.globalAlpha = gridOpacity * 0.85;
           ctx.fillStyle = settings.backgroundColor || '#ffffff';
           ctx.beginPath();
-          ctx.roundRect(tx - tw / 2 - padX, labelY - padY, tw + padX * 2, labelSize + padY * 2, labelSize * 0.35);
+          ctx.roundRect(tx - tw / 2 - padX, labelY - labelSize2 - padY, tw + padX * 2, labelSize2 + padY * 2, labelSize2 * 0.35);
           ctx.fill();
 
           // label text at full contrast
