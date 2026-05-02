@@ -593,6 +593,47 @@ export function SettingsPanel() {
         </div>
       </Section>
 
+      {/* ════ Grid Lines ════ */}
+      <Section title="Grid Lines" defaultOpen={false}>
+
+        <div className="fl-sub-heading">
+          <span>Lines</span>
+          <div className="fl-sub-line" />
+          <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+            <button className={'fl-color-tab' + (settings.gridVisible !== false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ gridVisible: true })}>On</button>
+            <button className={'fl-color-tab' + (settings.gridVisible === false ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ gridVisible: false })}>Off</button>
+          </div>
+        </div>
+
+        {settings.gridVisible !== false && (
+          <>
+            <div className="fl-sub-heading" style={{ marginTop: 10 }}>
+              <span>Labels</span>
+              <div className="fl-sub-line" />
+              <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+                <button className={'fl-color-tab' + (settings.gridLabelVisible !== false ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ gridLabelVisible: true })}>On</button>
+                <button className={'fl-color-tab' + (settings.gridLabelVisible === false ? ' fl-color-tab-active' : '')}
+                  onClick={() => updateSettings({ gridLabelVisible: false })}>Off</button>
+              </div>
+            </div>
+
+            <div className="fl-field" style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>
+                <span className="fl-val-badge">{Math.round((settings.gridOpacity ?? 0.12) * 100)}%</span>
+              </div>
+              <input type="range" className="fl-slider" min={0.03} max={1} step={0.01}
+                value={settings.gridOpacity ?? 0.12}
+                onChange={e => updateSettings({ gridOpacity: parseFloat(e.target.value) })} />
+            </div>
+          </>
+        )}
+
+      </Section>
+
       {/* ════ Total Counter ════ */}
       <Section title="Total Counter" defaultOpen={false}>
         <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

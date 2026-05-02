@@ -114,6 +114,9 @@ export interface ChartSettings {
   watermarkOpacity: number;
   watermarkFontSize: number;
   videoEntries: VideoEntry[];
+  gridVisible: boolean;
+  gridOpacity: number;
+  gridLabelVisible: boolean;
   tickerVisible: boolean;
   tickerEntries: TickerEntry[];
   tickerSpeed: number;
@@ -233,6 +236,9 @@ export const useChartStore = create<ChartStore>((set) => ({
     watermarkOpacity: 0.7,
     watermarkFontSize: 20,
     videoEntries: [{ objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1, offsetX: 0, offsetY: 0 }],
+    gridVisible: true,
+    gridOpacity: 0.12,
+    gridLabelVisible: true,
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],
     tickerSpeed: 80,
