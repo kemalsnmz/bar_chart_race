@@ -524,6 +524,8 @@ export function useChartRenderer() {
         case 'bottom-right': cx = physicalWidth - clipW - pad; cy = physicalHeight - clipH - pad; break;
         case 'center':       cx = (physicalWidth - clipW) / 2; cy = (physicalHeight - clipH) / 2; break;
       }
+      cx += (clip.offsetX ?? 0);
+      cy += (clip.offsetY ?? 0);
 
       const fa = clipFadeAlpha(curIdx2, fi, ti, t);
       ctx.save();

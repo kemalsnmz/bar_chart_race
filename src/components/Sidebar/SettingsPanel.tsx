@@ -916,6 +916,28 @@ export function SettingsPanel() {
                   style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
               </div>
 
+              {/* Offset row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>Offset X</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={entry.offsetX ?? 0}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], offsetX: Number(e.target.value) };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 2px' }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>Y</span>
+                <input type="number" className="form-input spinner-visible" step={5}
+                  value={entry.offsetY ?? 0}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], offsetY: Number(e.target.value) };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 2px' }} />
+              </div>
+
             </div>
           ))}
 
@@ -924,7 +946,7 @@ export function SettingsPanel() {
             className="fl-color-tab"
             style={{ width: '100%', padding: '6px', fontSize: 18, fontWeight: 400 }}
             onClick={() => {
-              const newEntry: VideoEntry = { objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1 };
+              const newEntry: VideoEntry = { objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1, offsetX: 0, offsetY: 0 };
               updateSettings({ videoEntries: [...(settings.videoEntries ?? []), newEntry] });
             }}
           >+</button>
