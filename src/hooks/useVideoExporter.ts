@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useChartStore } from '../store/chartStore';
 import { useChartRenderer } from './useChartRenderer';
 
@@ -30,8 +30,8 @@ export function useVideoExporter() {
 
     try {
       await ffmpeg.load({
-        coreURL: '/ffmpeg-core.js',
-        wasmURL: '/ffmpeg-core.wasm',
+        coreURL: await toBlobURL('/ffmpeg-core.js',   'text/javascript'),
+        wasmURL: await toBlobURL('/ffmpeg-core.wasm', 'application/wasm'),
       });
     } catch (e) {
       setExporting(false);
