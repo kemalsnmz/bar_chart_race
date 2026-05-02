@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useChartStore } from '../store/chartStore';
 import { useChartRenderer } from './useChartRenderer';
 
@@ -29,13 +29,10 @@ export function useVideoExporter() {
       setExporting(true, 0.8 + progress * 0.2);
     });
 
+    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
     await ffmpeg.load({
-      coreURL: await fetchFile(
-        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'
-      ) as any,
-      wasmURL: await fetchFile(
-        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-      ) as any,
+      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`,   'text/javascript'),
+      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
     });
 
     setExporting(true, 0.05);
@@ -100,7 +97,7 @@ export function useVideoExporter() {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 
     setExporting(false, 1);
-  }, [periods, settings, exportSettings, drawFrame, setExporting]);
+  }, [periods, settings, exportSettings, drawFrame, seekClipVideos, setExporting]);
 
   return { exportVideo };
 }
