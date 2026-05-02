@@ -6,7 +6,7 @@ import { useChartRenderer } from './useChartRenderer';
 
 export function useVideoExporter() {
   const { periods, settings, exportSettings, setExporting } = useChartStore();
-  const { drawFrame } = useChartRenderer();
+  const { drawFrame, seekClipVideos } = useChartRenderer();
 
   const exportVideo = useCallback(async () => {
     if (periods.length === 0) return;
@@ -57,6 +57,7 @@ export function useVideoExporter() {
     // Render every frame and write to FFmpeg virtual FS
     for (let p = 0; p < periods.length - 1; p++) {
       for (let f = 0; f < framesPerPeriod; f++) {
+        await seekClipVideos(p, f / framesPerPeriod);
         drawFrame(ctx, width, height, p, f / framesPerPeriod, deltaMs);
         await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
         frameIdx++;
@@ -65,6 +66,7 @@ export function useVideoExporter() {
     }
 
     // Final frame
+    await seekClipVideos(periods.length - 1, 1);
     drawFrame(ctx, width, height, periods.length - 1, 1, deltaMs);
     await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
     setExporting(true, 0.78);

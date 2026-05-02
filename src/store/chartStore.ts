@@ -44,6 +44,16 @@ export interface TickerEntry {
   to: string;
 }
 
+export interface VideoEntry {
+  objectUrl: string;
+  fileName: string;
+  from: string;
+  to: string;
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+  width: number;   // % of canvas width (10–80)
+  opacity: number; // 0–1
+}
+
 export interface ChartSettings {
   title: string;
   titleVisible: boolean;
@@ -101,6 +111,7 @@ export interface ChartSettings {
   watermarkPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   watermarkOpacity: number;
   watermarkFontSize: number;
+  videoEntries: VideoEntry[];
   tickerVisible: boolean;
   tickerEntries: TickerEntry[];
   tickerSpeed: number;
@@ -219,6 +230,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     watermarkPosition: 'bottom-right',
     watermarkOpacity: 0.7,
     watermarkFontSize: 20,
+    videoEntries: [],
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],
     tickerSpeed: 80,

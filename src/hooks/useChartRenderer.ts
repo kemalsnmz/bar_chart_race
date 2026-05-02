@@ -4,12 +4,45 @@ import { useChartStore } from '../store/chartStore';
 import { interpolate } from '../utils/interpolate';
 import { buildBarColors, buildCategoryColors, parseSingleColorText } from '../utils/colorPalettes';
 import { formatValue } from '../utils/formatValue';
+import type { VideoEntry } from '../store/chartStore';
 
 const imageCache = new Map<string, HTMLImageElement | null>();
 
 
 let bgVideoEl: HTMLVideoElement | null = null;
 let bgVideoSrc = '';
+
+const clipVideoCache = new Map<string, HTMLVideoElement>();
+
+function getClipVideo(url: string): HTMLVideoElement {
+  if (!clipVideoCache.has(url)) {
+    const v = document.createElement('video');
+    v.src = url;
+    v.loop = true;
+    v.muted = true;
+    v.playsInline = true;
+    v.play().catch(() => {});
+    clipVideoCache.set(url, v);
+  }
+  return clipVideoCache.get(url)!;
+}
+
+function clipFadeAlpha(
+  curIdx: number,
+  fi: number,
+  ti: number,
+  t: number
+): number {
+  const [rs, re] = fi <= ti ? [fi, ti] : [ti, fi];
+  if (rs === re) {
+    if (t < 0.2) return t / 0.2;
+    if (t > 0.8) return (1 - t) / 0.2;
+    return 1;
+  }
+  if (curIdx === rs) return t < 0.2 ? t / 0.2 : 1;
+  if (curIdx === re) return t > 0.8 ? (1 - t) / 0.2 : 1;
+  return 1;
+}
 
 function getBgVideo(url: string): HTMLVideoElement {
   if (bgVideoSrc !== url) {
@@ -465,6 +498,40 @@ export function useChartRenderer() {
       }
     }
 
+    // Video Clips
+    const curIdx2 = periods.indexOf(currentPeriod);
+    for (const clip of (settings.videoEntries ?? [])) {
+      if (!clip.objectUrl) continue;
+      const fi = periods.indexOf(clip.from);
+      const ti = periods.indexOf(clip.to);
+      if (fi === -1 || ti === -1) continue;
+      const [cs, ce] = fi <= ti ? [fi, ti] : [ti, fi];
+      if (curIdx2 < cs || curIdx2 > ce) continue;
+
+      const video = getClipVideo(clip.objectUrl);
+      if (video.readyState < 2) continue;
+
+      const clipW = physicalWidth * (clip.width / 100);
+      const aspect = video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
+      const clipH = clipW / aspect;
+      const pad = physicalWidth * 0.03;
+
+      let cx = 0, cy = 0;
+      switch (clip.position) {
+        case 'top-left':     cx = pad;                         cy = pad; break;
+        case 'top-right':    cx = physicalWidth - clipW - pad; cy = pad; break;
+        case 'bottom-left':  cx = pad;                         cy = physicalHeight - clipH - pad; break;
+        case 'bottom-right': cx = physicalWidth - clipW - pad; cy = physicalHeight - clipH - pad; break;
+        case 'center':       cx = (physicalWidth - clipW) / 2; cy = (physicalHeight - clipH) / 2; break;
+      }
+
+      const fa = clipFadeAlpha(curIdx2, fi, ti, t);
+      ctx.save();
+      ctx.globalAlpha = (clip.opacity ?? 1) * fa;
+      ctx.drawImage(video, cx, cy, clipW, clipH);
+      ctx.restore();
+    }
+
     // Bars
     topData.forEach((d) => {
       const rank = interpolate(prevRankMap.get(d.name) ?? settings.maxBars, currRankMap.get(d.name) ?? settings.maxBars, et);
@@ -640,5 +707,37 @@ export function useChartRenderer() {
 
   }, [data, periods, settings, imgVersion, bumpImgVersion]);
 
-  return { drawFrame, imgVersion };
+  const seekClipVideos = useCallback(async (periodIndex: number, t: number) => {
+    const curIdx = periodIndex;
+    for (const clip of (settings.videoEntries ?? []) as VideoEntry[]) {
+      if (!clip.objectUrl) continue;
+      const fi = periods.indexOf(clip.from);
+      const ti = periods.indexOf(clip.to);
+      if (fi === -1 || ti === -1) continue;
+      const [cs, ce] = fi <= ti ? [fi, ti] : [ti, fi];
+      if (curIdx < cs || curIdx > ce) continue;
+
+      const video = getClipVideo(clip.objectUrl);
+
+      if (video.readyState < 1) {
+        await new Promise<void>(resolve => {
+          const fn = () => { video.removeEventListener('loadedmetadata', fn); resolve(); };
+          video.addEventListener('loadedmetadata', fn);
+          setTimeout(resolve, 500);
+        });
+      }
+
+      const durationSec = settings.durationMs / 1000;
+      const clipTime = (curIdx - cs + t) * durationSec;
+      video.currentTime = video.duration > 0 ? Math.min(clipTime, video.duration) : clipTime;
+
+      await new Promise<void>(resolve => {
+        const fn = () => { video.removeEventListener('seeked', fn); resolve(); };
+        video.addEventListener('seeked', fn);
+        setTimeout(resolve, 200);
+      });
+    }
+  }, [periods, settings]);
+
+  return { drawFrame, imgVersion, seekClipVideos };
 }

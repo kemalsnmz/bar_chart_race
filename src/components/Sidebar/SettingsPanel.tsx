@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry } from '../../store/chartStore';
+import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry, VideoEntry } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -805,6 +805,129 @@ export function SettingsPanel() {
             value={settings.watermarkFontSize}
             onChange={e => updateSettings({ watermarkFontSize: Number(e.target.value) })}
             style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+      </Section>
+
+      {/* ════ Video Clips ════ */}
+      <Section title="Video Clips" defaultOpen={false}>
+
+        <div className="fl-field" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(settings.videoEntries ?? []).map((entry: VideoEntry, i: number) => (
+            <div key={i} style={{ background: 'var(--bg-secondary, #f5f5f5)', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+              {/* Upload row */}
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '3px 8px', flexShrink: 0 }}>
+                  {entry.fileName ? '↺ Replace' : '▶ Upload'}
+                  <input type="file" accept="video/*" style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const updated = [...(settings.videoEntries ?? [])];
+                      if (updated[i].objectUrl) URL.revokeObjectURL(updated[i].objectUrl);
+                      updated[i] = { ...updated[i], objectUrl: URL.createObjectURL(file), fileName: file.name };
+                      updateSettings({ videoEntries: updated });
+                    }}
+                  />
+                </label>
+                <span style={{ flex: 1, fontSize: 10, color: 'var(--text-secondary, #888)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {entry.fileName || 'no file'}
+                </span>
+                <button
+                  onClick={() => {
+                    const updated = (settings.videoEntries ?? []).filter((_: VideoEntry, j: number) => j !== i);
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #aaa)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
+                  title="Remove"
+                >×</button>
+              </div>
+
+              {/* From / To row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>FROM</span>
+                <select className="form-input" value={entry.from}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], from: e.target.value };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>TO</span>
+                <select className="form-input" value={entry.to}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], to: e.target.value };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              {/* Position row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>Pos</span>
+                <div className="fl-tabs" style={{ margin: 0, flex: 1 }}>
+                  {([
+                    { value: 'top-left',     label: '↖' },
+                    { value: 'top-right',    label: '↗' },
+                    { value: 'center',       label: '⊡' },
+                    { value: 'bottom-left',  label: '↙' },
+                    { value: 'bottom-right', label: '↘' },
+                  ] as { value: VideoEntry['position']; label: string }[]).map(opt => (
+                    <button key={opt.value}
+                      className={'fl-color-tab' + (entry.position === opt.value ? ' fl-color-tab-active' : '')}
+                      onClick={() => {
+                        const updated = [...(settings.videoEntries ?? [])];
+                        updated[i] = { ...updated[i], position: opt.value };
+                        updateSettings({ videoEntries: updated });
+                      }}
+                      style={{ fontSize: 14, flex: 1 }}
+                    >{opt.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Width + Opacity row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>W%</span>
+                <input type="number" className="form-input spinner-visible" min={5} max={80} step={5}
+                  value={entry.width}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], width: Number(e.target.value) };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>Op</span>
+                <input type="number" className="form-input spinner-visible" min={0.1} max={1} step={0.05}
+                  value={entry.opacity}
+                  onChange={e => {
+                    const updated = [...(settings.videoEntries ?? [])];
+                    updated[i] = { ...updated[i], opacity: parseFloat(e.target.value) };
+                    updateSettings({ videoEntries: updated });
+                  }}
+                  style={{ width: 46, textAlign: 'center', padding: '3px 2px' }} />
+              </div>
+
+            </div>
+          ))}
+
+          {/* Add button */}
+          <button
+            className="fl-color-tab"
+            style={{ width: '100%', padding: '6px', fontSize: 18, fontWeight: 400 }}
+            onClick={() => {
+              const newEntry: VideoEntry = { objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1 };
+              updateSettings({ videoEntries: [...(settings.videoEntries ?? []), newEntry] });
+            }}
+          >+</button>
         </div>
 
       </Section>
