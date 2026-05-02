@@ -70,17 +70,51 @@ function App() {
         <div className="top-bar-space" />
 
         {/* Canvas ratio buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>Format</span>
-          <div className="tab-group">
-            {RATIOS.map(r => (
-              <button
-                key={r}
-                onClick={() => updateExportSettings({ canvasRatio: r })}
-                className={'tab-btn' + (exportSettings.canvasRatio === r ? ' active' : '')}
-                style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600 }}
-              >{r}</button>
-            ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Format</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {/* 16:9 — landscape monitor */}
+            <button
+              onClick={() => updateExportSettings({ canvasRatio: '16:9' })}
+              className={'ratio-btn' + (exportSettings.canvasRatio === '16:9' ? ' ratio-btn-active' : '')}
+              title=""
+              data-tooltip="16:9 — Landscape"
+            >
+              <svg viewBox="0 0 48 32" width="34" height="23" fill="none">
+                <rect x="1" y="1" width="46" height="27" rx="3" stroke="currentColor" strokeWidth="2"/>
+                <rect x="17" y="28" width="14" height="2.5" rx="1" fill="currentColor" opacity="0.5"/>
+                <rect x="12" y="30.5" width="24" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"/>
+                <text x="24" y="17" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor" fontFamily="Inter,sans-serif">16:9</text>
+              </svg>
+            </button>
+
+            {/* 9:16 — portrait phone */}
+            <button
+              onClick={() => updateExportSettings({ canvasRatio: '9:16' })}
+              className={'ratio-btn' + (exportSettings.canvasRatio === '9:16' ? ' ratio-btn-active' : '')}
+              title=""
+              data-tooltip="9:16 — Portrait"
+            >
+              <svg viewBox="0 0 28 46" width="17" height="28" fill="none">
+                <rect x="1" y="1" width="26" height="44" rx="4" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="14" cy="41" r="2" fill="currentColor" opacity="0.4"/>
+                <rect x="10" y="3.5" width="8" height="1.5" rx="0.75" fill="currentColor" opacity="0.4"/>
+                <text x="14" y="24" textAnchor="middle" fontSize="11" fontWeight="700" fill="currentColor" fontFamily="Inter,sans-serif">9:16</text>
+              </svg>
+            </button>
+
+            {/* 1:1 — square */}
+            <button
+              onClick={() => updateExportSettings({ canvasRatio: '1:1' })}
+              className={'ratio-btn' + (exportSettings.canvasRatio === '1:1' ? ' ratio-btn-active' : '')}
+              title=""
+              data-tooltip="1:1 — Square"
+            >
+              <svg viewBox="0 0 36 36" width="24" height="24" fill="none">
+                <rect x="1" y="1" width="34" height="34" rx="3" stroke="currentColor" strokeWidth="2"/>
+                <text x="18" y="22" textAnchor="middle" fontSize="12" fontWeight="700" fill="currentColor" fontFamily="Inter,sans-serif">1:1</text>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -107,8 +141,12 @@ function App() {
 
         {/* Right sidebar — always visible */}
         <aside className="right-sidebar">
-          <SettingsPanel />
-          <ExportPanel />
+          <div className="settings-scroll-area">
+            <SettingsPanel />
+          </div>
+          <div className="export-sticky-panel">
+            <ExportPanel />
+          </div>
         </aside>
       </div>
     </div>

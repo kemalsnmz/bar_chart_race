@@ -9,7 +9,7 @@ export function ExportPanel() {
 
   return (
     <div className="fl-panel">
-      <button className="fl-section-hdr" style={{ padding: '13px 16px' }} onClick={() => setOpen(o => !o)}>
+      <button className="fl-section-hdr fl-export-hdr" onClick={() => setOpen(o => !o)}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
           style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform .18s ease', flexShrink: 0 }}>
           <polyline points="9 18 15 12 9 6"/>

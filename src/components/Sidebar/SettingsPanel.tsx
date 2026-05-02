@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, ImagePosition, TickerEntry } from '../../store/chartStore';
+import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -49,7 +49,7 @@ function ColorTab({ id, active, onClick, children }: {
 
 // ── Main panel ─────────────────────────────────────────
 export function SettingsPanel() {
-  const { settings, updateSettings, data, exportSettings, updateExportSettings, periods } = useChartStore();
+  const { settings, updateSettings, data, periods } = useChartStore();
 
   const allCategories = [...new Set(data.map(d => d.category ?? '(no category)'))];
 

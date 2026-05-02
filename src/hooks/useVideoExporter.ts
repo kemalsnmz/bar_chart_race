@@ -13,132 +13,89 @@ export function useVideoExporter() {
 
     setExporting(true, 0);
 
-    const width = exportSettings.resolution === '4k' ? 3840 : 1920;
+    const width  = exportSettings.resolution === '4k' ? 3840 : 1920;
     const height = exportSettings.resolution === '4k' ? 2160 : 1080;
-    const fps = exportSettings.fps;
-    const bitrate = exportSettings.resolution === '4k' ? 80000000 : 20000000;
+    const fps    = exportSettings.fps;
 
     const canvas = document.createElement('canvas');
-    canvas.width = width;
+    canvas.width  = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      setExporting(false);
-      throw new Error('Canvas context could not be created');
-    }
+    if (!ctx) { setExporting(false); throw new Error('No canvas context'); }
 
-    const stream = canvas.captureStream(fps);
-
-    const mimeTypes = [
-      'video/mp4; codecs="avc1.42E01E"',
-      'video/webm; codecs="vp9"',
-      'video/webm; codecs="vp8"',
-      'video/webm'
-    ];
-
-    let selectedMimeType = '';
-    for (const mimeType of mimeTypes) {
-      if (MediaRecorder.isTypeSupported(mimeType)) {
-        selectedMimeType = mimeType;
-        break;
-      }
-    }
-
-    if (!selectedMimeType) {
-      setExporting(false);
-      throw new Error('No supported video MIME type found');
-    }
-
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: selectedMimeType,
-      videoBitsPerSecond: bitrate,
+    // Load FFmpeg up front so frames are encoded at exact constant framerate
+    const ffmpeg = new FFmpeg();
+    ffmpeg.on('progress', ({ progress }) => {
+      setExporting(true, 0.8 + progress * 0.2);
     });
 
-    const chunks: Blob[] = [];
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    const recordingPromise = new Promise<Blob>((resolve) => {
-      mediaRecorder.onstop = () => {
-        resolve(new Blob(chunks, { type: selectedMimeType }));
-      };
+    await ffmpeg.load({
+      coreURL: await fetchFile(
+        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'
+      ) as any,
+      wasmURL: await fetchFile(
+        'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+      ) as any,
     });
 
-    mediaRecorder.start();
+    setExporting(true, 0.05);
 
     const framesPerPeriod = Math.floor((settings.durationMs / 1000) * fps);
-    const totalFrames = (periods.length - 1) * framesPerPeriod;
-    const deltaMs = 1000 / fps;
+    const totalFrames     = (periods.length - 1) * framesPerPeriod + 1;
+    const deltaMs         = 1000 / fps;
+    let   frameIdx        = 0;
 
-    let currentFrame = 0;
+    const captureFrame = (): Promise<Uint8Array> =>
+      new Promise(resolve =>
+        canvas.toBlob(async blob => {
+          resolve(new Uint8Array(await blob!.arrayBuffer()));
+        }, 'image/jpeg', 0.92)
+      );
 
+    const pad = (n: number) => String(n).padStart(6, '0');
+
+    // Render every frame and write to FFmpeg virtual FS
     for (let p = 0; p < periods.length - 1; p++) {
       for (let f = 0; f < framesPerPeriod; f++) {
-        const t = f / framesPerPeriod;
-        drawFrame(ctx, width, height, p, t, deltaMs);
-
-        await new Promise((r) => setTimeout(r, 1000 / fps));
-
-        currentFrame++;
-        setExporting(true, (currentFrame / totalFrames) * 0.5);
+        drawFrame(ctx, width, height, p, f / framesPerPeriod, deltaMs);
+        await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
+        frameIdx++;
+        setExporting(true, 0.05 + (frameIdx / totalFrames) * 0.73);
       }
     }
 
+    // Final frame
     drawFrame(ctx, width, height, periods.length - 1, 1, deltaMs);
-    await new Promise((r) => setTimeout(r, 1000 / fps));
+    await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
+    setExporting(true, 0.78);
 
-    mediaRecorder.stop();
-    const blob = await recordingPromise;
+    // Encode: -framerate input, -r output both locked to fps → constant framerate
+    await ffmpeg.exec([
+      '-framerate', String(fps),
+      '-i',         'f%06d.jpg',
+      '-c:v',       'libx264',
+      '-preset',    'fast',
+      '-crf',       '18',
+      '-pix_fmt',   'yuv420p',
+      '-r',         String(fps),   // enforce CFR in output
+      '-movflags',  '+faststart',  // web-optimised: moov atom at front
+      'output.mp4',
+    ]);
 
-    let finalBlob = blob;
-    let finalExtension = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
-
-    if (!selectedMimeType.includes('mp4')) {
-      try {
-        setExporting(true, 0.5);
-        const ffmpeg = new FFmpeg();
-
-        ffmpeg.on('progress', ({ progress }) => {
-          setExporting(true, 0.5 + progress * 0.5);
-        });
-
-        await ffmpeg.load({
-          coreURL: await fetchFile(
-            'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js'
-          ) as any,
-          wasmURL: await fetchFile(
-            'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
-          ) as any,
-        });
-
-        const inputName = 'input.webm';
-        const outputName = 'output.mp4';
-
-        await ffmpeg.writeFile(inputName, await fetchFile(blob));
-        await ffmpeg.exec(['-i', inputName, '-c:v', 'copy', outputName]);
-
-        const fileData = await ffmpeg.readFile(outputName);
-        const data = new Uint8Array(fileData as any);
-
-        finalBlob = new Blob([data.buffer], { type: 'video/mp4' });
-        finalExtension = 'mp4';
-      } catch (err) {
-        console.error('FFmpeg conversion failed, falling back to original blob', err);
-      }
-    }
+    const fileData  = await ffmpeg.readFile('output.mp4');
+    const finalBlob = new Blob(
+      [new Uint8Array(fileData as ArrayBuffer).buffer],
+      { type: 'video/mp4' }
+    );
 
     const url = URL.createObjectURL(finalBlob);
-    const a = document.createElement('a');
+    const a   = document.createElement('a');
     a.style.display = 'none';
-    a.href = url;
-    a.download = 'bar-chart-race-' + exportSettings.resolution + '.' + finalExtension;
+    a.href     = url;
+    a.download = `bar-chart-race-${exportSettings.resolution}.mp4`;
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 100);
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 
     setExporting(false, 1);
   }, [periods, settings, exportSettings, drawFrame, setExporting]);

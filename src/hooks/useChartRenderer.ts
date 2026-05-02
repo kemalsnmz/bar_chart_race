@@ -197,15 +197,38 @@ export function useChartRenderer() {
       };
     } else {
       const isPortrait = physicalWidth < physicalHeight;
-      const leftPct  = isPortrait ? 0.28 : 0.15;
-      const rightPct = isPortrait ? 0.20 : 0.15;
-      const topPct   = isPortrait ? 0.05 : 0.10;
-      const extraRightMargin = settings.imagePosition === 'right' ? (settings.imageWidth + (settings.imageMarginRight || 10) * 2) : 0;
+      const topPct = isPortrait ? 0.05 : 0.10;
+      const approxTop = settings.titleVisible ? physicalHeight * topPct : physicalHeight * 0.03;
+      const approxBot = physicalHeight * 0.04;
+      const approxChartH = physicalHeight - approxTop - approxBot;
+      const totalPartsEst = settings.barThickness + settings.barGap;
+      const approxBarH = (approxChartH / settings.maxBars) * (settings.barThickness / totalPartsEst);
+      const approxNameSize = settings.labelVisible
+        ? Math.round(approxBarH * (settings.labelFontSize / 100))
+        : 0;
+
+      // Measure label width to set left margin
+      let neededLeft = physicalWidth * (isPortrait ? 0.22 : 0.14);
+      if (settings.labelVisible && settings.labelPosition === 'left' && approxNameSize > 0) {
+        ctx.font = (settings.labelBold ? '700 ' : '400 ') + approxNameSize + 'px Inter, sans-serif';
+        const maxLW = Math.max(...allNames.map(n => ctx.measureText(n).width));
+        const imgExtra = settings.imagePosition === 'left' ? settings.imageWidth + (settings.imageMarginRight || 10) : 0;
+        neededLeft = Math.max(neededLeft, maxLW + (settings.labelMargin ?? 15) + imgExtra + 12);
+      }
+
+      // Measure value width to set right margin
+      const maxDataVal = Math.max(...Array.from(currDataMap.values()), 1);
+      const sampleValStr = formatValue(maxDataVal) + (settings.unit ? ' ' + settings.unit : '');
+      ctx.font = '700 ' + (approxNameSize || 14) + 'px Inter, sans-serif';
+      const valW = ctx.measureText(sampleValStr).width;
+      const imgRightExtra = settings.imagePosition === 'right' ? (settings.imageWidth + (settings.imageMarginRight || 10) * 2) : 0;
+      const neededRight = Math.max(physicalWidth * (isPortrait ? 0.16 : 0.14), valW + imgRightExtra + 16);
+
       margin = {
-        top: settings.titleVisible ? physicalHeight * topPct : physicalHeight * 0.03,
-        right: physicalWidth * rightPct + extraRightMargin,
-        bottom: physicalHeight * 0.04,
-        left: physicalWidth * leftPct,
+        top: approxTop,
+        right: neededRight,
+        bottom: approxBot,
+        left: neededLeft,
       };
     }
 
