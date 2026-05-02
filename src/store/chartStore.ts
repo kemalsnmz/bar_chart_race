@@ -237,7 +237,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     watermarkFontSize: 20,
     videoEntries: [{ objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1, offsetX: 0, offsetY: 0 }],
     gridVisible: true,
-    gridOpacity: 0.12,
+    gridOpacity: 0.3,
     gridLabelVisible: true,
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],

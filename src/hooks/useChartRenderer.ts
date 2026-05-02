@@ -503,14 +503,11 @@ export function useChartRenderer() {
       const ticks = xScale.ticks(5).filter((v: number) => v > 0);
       const gridOpacity = settings.gridOpacity ?? 0.12;
       const labelSize = Math.round(physicalHeight * 0.016);
-      const dashLen = Math.max(3, physicalHeight * 0.004);
-      const gapLen  = Math.max(5, physicalHeight * 0.006);
 
       ctx.save();
       ctx.strokeStyle = textColor;
-      ctx.lineWidth = Math.max(1, physicalWidth / 1920);
+      ctx.lineWidth = Math.max(1, physicalWidth / 960);
       ctx.globalAlpha = gridOpacity;
-      ctx.setLineDash([dashLen, gapLen]);
 
       for (const tick of ticks) {
         const tx = margin.left + xScale(tick);
@@ -520,21 +517,30 @@ export function useChartRenderer() {
         ctx.stroke();
       }
 
-      ctx.setLineDash([]);
-
       if (settings.gridLabelVisible !== false) {
-        ctx.fillStyle = textColor;
-        ctx.font = `600 ${labelSize}px Inter, sans-serif`;
+        ctx.font = `700 ${labelSize}px Inter, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.globalAlpha = Math.min(1, gridOpacity * 3);
+        ctx.textBaseline = 'top';
+        const labelY = margin.top + 4;
+        const padX = labelSize * 0.5;
+        const padY = labelSize * 0.25;
+
         for (const tick of ticks) {
           const tx = margin.left + xScale(tick);
-          ctx.fillText(
-            formatValue(tick) + (settings.unit ? ' ' + settings.unit : ''),
-            tx,
-            margin.top - 4
-          );
+          const label = formatValue(tick) + (settings.unit ? ' ' + settings.unit : '');
+          const tw = ctx.measureText(label).width;
+
+          // pill background for readability
+          ctx.globalAlpha = gridOpacity * 0.85;
+          ctx.fillStyle = settings.backgroundColor || '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(tx - tw / 2 - padX, labelY - padY, tw + padX * 2, labelSize + padY * 2, labelSize * 0.35);
+          ctx.fill();
+
+          // label text at full contrast
+          ctx.globalAlpha = Math.min(1, gridOpacity * 4);
+          ctx.fillStyle = textColor;
+          ctx.fillText(label, tx, labelY);
         }
       }
 
