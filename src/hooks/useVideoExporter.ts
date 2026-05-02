@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 import { useChartStore } from '../store/chartStore';
 import { useChartRenderer } from './useChartRenderer';
 
@@ -23,17 +23,21 @@ export function useVideoExporter() {
     const ctx = canvas.getContext('2d');
     if (!ctx) { setExporting(false); throw new Error('No canvas context'); }
 
-    // Load FFmpeg up front so frames are encoded at exact constant framerate
     const ffmpeg = new FFmpeg();
     ffmpeg.on('progress', ({ progress }) => {
       setExporting(true, 0.8 + progress * 0.2);
     });
 
-    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`,   'text/javascript'),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+    try {
+      await ffmpeg.load({
+        coreURL: '/ffmpeg-core.js',
+        wasmURL: '/ffmpeg-core.wasm',
+      });
+    } catch (e) {
+      setExporting(false);
+      alert('FFmpeg yüklenemedi: ' + String(e));
+      return;
+    }
 
     setExporting(true, 0.05);
 
@@ -99,5 +103,14 @@ export function useVideoExporter() {
     setExporting(false, 1);
   }, [periods, settings, exportSettings, drawFrame, seekClipVideos, setExporting]);
 
-  return { exportVideo };
+  const exportVideoSafe = useCallback(async () => {
+    try {
+      await exportVideo();
+    } catch (e) {
+      setExporting(false);
+      alert('Export hatası: ' + String(e));
+    }
+  }, [exportVideo, setExporting]);
+
+  return { exportVideo: exportVideoSafe };
 }
