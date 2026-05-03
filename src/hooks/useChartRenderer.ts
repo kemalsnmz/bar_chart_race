@@ -4,6 +4,7 @@ import { useChartStore } from '../store/chartStore';
 import { interpolate } from '../utils/interpolate';
 import { buildBarColors, buildCategoryColors, parseSingleColorText } from '../utils/colorPalettes';
 import { formatValue } from '../utils/formatValue';
+import type { ValueFormat } from '../utils/formatValue';
 import type { VideoEntry } from '../store/chartStore';
 
 const imageCache = new Map<string, HTMLImageElement | null>();
@@ -228,6 +229,8 @@ export function useChartRenderer() {
     const prevRankMap = new Map(fullPrev.map((d, i) => [d.name, i]));
     const currRankMap = new Map(fullCurr.map((d, i) => [d.name, i]));
 
+    const vfmt = (settings.valueFormat ?? 'short') as ValueFormat;
+
     let margin: { top: number; right: number; bottom: number; left: number };
     if (isVertical) {
       margin = {
@@ -258,10 +261,11 @@ export function useChartRenderer() {
         neededLeft = Math.max(minLeft, maxLW + (settings.labelMargin ?? 15) + imgExtra + 12);
       }
 
-      // Measure value width to set right margin
+      // Measure value width to set right margin (use fixed valueSize, not labelFontSize)
+      const approxValueSize = Math.round(approxBarH * ((settings.valueFontSize ?? 55) / 100));
       const maxDataVal = Math.max(...Array.from(currDataMap.values()), 1);
-      const sampleValStr = formatValue(maxDataVal) + (settings.unit ? ' ' + settings.unit : '');
-      ctx.font = '700 ' + (approxNameSize || 14) + 'px Inter, sans-serif';
+      const sampleValStr = formatValue(maxDataVal, vfmt) + (settings.unit ? ' ' + settings.unit : '');
+      ctx.font = '700 ' + (approxValueSize || 14) + 'px Inter, sans-serif';
       const valW = ctx.measureText(sampleValStr).width;
       const imgRightExtra = settings.imagePosition === 'right' ? (settings.imageWidth + (settings.imageMarginRight || 10) * 2) : 0;
       const neededRight = Math.max(physicalWidth * (isPortrait ? 0.16 : 0.14), valW + imgRightExtra + 16);
@@ -410,7 +414,7 @@ export function useChartRenderer() {
         totalY = (settings.timeVisible !== false) ? physicalHeight * 0.73 : physicalHeight * 0.95;
       }
       totalY += (settings.totalMarginY ?? 0);
-      ctx.fillText(`Total: ${formatValue(totalVal)} ${settings.unit}`, totalX, totalY);
+      ctx.fillText(`Total: ${formatValue(totalVal, vfmt)} ${settings.unit}`, totalX, totalY);
       ctx.restore();
     }
 
@@ -458,26 +462,44 @@ export function useChartRenderer() {
           }
         }
 
-        const th = settings.tickerHeight;
         const mb = settings.tickerMarginBottom ?? 0;
         const mx = settings.tickerMarginX ?? 0;
-        const fontSize = Math.round(physicalHeight * (settings.tickerFontSize / 175));
+        const fontSize = Math.round(physicalHeight * (settings.tickerFontSize / 220));
         const padX = fontSize * 0.9;
-        const radius = th * 0.25;
+        const padY = fontSize * 0.6;
+        const lineHeight = fontSize * 1.4;
 
-        // Measure text, build box width capped at 45% canvas
+        // Fixed box width — same as tickerHeight-based column, capped at 45% canvas
+        const boxW = Math.min(physicalWidth * 0.45 - mx * 2, physicalWidth * 0.45);
+        const innerW = boxW - padX * 2;
+
         ctx.font = `600 ${fontSize}px Inter, sans-serif`;
-        const rawTextW = ctx.measureText(text).width;
-        const boxW = Math.min(rawTextW + padX * 2, physicalWidth * 0.45);
+
+        // Word-wrap text into lines that fit innerW
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let current = '';
+        for (const word of words) {
+          const test = current ? current + ' ' + word : word;
+          if (ctx.measureText(test).width <= innerW) {
+            current = test;
+          } else {
+            if (current) lines.push(current);
+            current = word;
+          }
+        }
+        if (current) lines.push(current);
+
+        const boxH = lines.length * lineHeight + padY * 2;
+        const radius = Math.min(boxH * 0.25, fontSize * 0.5);
 
         // Total counter Y anchor
         const totalY = isVertical
           ? ((settings.timeVisible !== false) ? physicalHeight * 0.28 : physicalHeight * 0.05)
           : ((settings.timeVisible !== false) ? physicalHeight * 0.73 : physicalHeight * 0.95);
 
-        const boxH = th;
         const boxX = physicalWidth * 0.95 - boxW - mx;
-        const boxY = totalY - boxH - 10 - mb;
+        const boxY = totalY - boxH - 10 - mb; // grows upward
 
         ctx.save();
 
@@ -496,17 +518,14 @@ export function useChartRenderer() {
         ctx.roundRect(boxX, boxY, boxW, boxH, radius);
         ctx.stroke();
 
-        // Clip text inside box
-        ctx.beginPath();
-        ctx.roundRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4, radius);
-        ctx.clip();
-
-        // Text
+        // Text lines
         ctx.globalAlpha = fadeAlpha;
         ctx.fillStyle = settings.tickerTextColor;
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
-        ctx.fillText(text, boxX + boxW / 2, boxY + boxH / 2);
+        lines.forEach((line, i) => {
+          ctx.fillText(line, boxX + boxW / 2, boxY + padY + i * lineHeight + lineHeight / 2);
+        });
 
         ctx.restore();
       }
@@ -605,6 +624,7 @@ export function useChartRenderer() {
 
       const color = colorMap.get(d.name) ?? '#6c63ff';
       const nameSize = settings.labelVisible ? Math.round(barThicknessPx * (settings.labelFontSize / 100)) : 0;
+      const valueSize = Math.round(barThicknessPx * ((settings.valueFontSize ?? 55) / 100));
       
       const imgUrl = imageUrlMap.get(d.name);
       const cachedImg = imgUrl ? imageCache.get(imgUrl) : undefined;
@@ -703,26 +723,48 @@ export function useChartRenderer() {
         ctx.save();
         ctx.translate(bx + bw / 2, by + (settings.labelMargin ?? 15));
         ctx.rotate(-Math.PI / 2);
-        ctx.fillStyle = getTextColor(color);
-        ctx.font = (settings.labelBold ? '700 ' : '400 ') + nameSize + 'px Inter, sans-serif';
+        ctx.fillStyle = settings.valueColor || getTextColor(color);
+        ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.fillText(formatValue(d.value) + ' ' + settings.unit, 0, 0);
+        ctx.fillText(formatValue(d.value, vfmt) + ' ' + settings.unit, 0, 0);
         ctx.restore();
 
       } else {
         // Horizontal layout image & labels
+        const labelMargin = settings.labelMargin ?? 15;
+        const isInside = settings.labelPosition === 'inside-left' || settings.labelPosition === 'inside-right';
+
+        // Determine effective font size (shrink mode: fill bar width, shrink only if text overflows)
+        let effectiveNameSize = nameSize;
+        if (settings.labelVisible && isInside && settings.labelOverflow === 'shrink') {
+          const imgExtra = settings.imagePosition === 'inside' && hasImage ? imgW + gap * 2 : 0;
+          const available = bw - labelMargin * 2 - imgExtra;
+          // Start from max possible (85% of bar height), shrink until text fits
+          effectiveNameSize = Math.round(bh * 0.85);
+          ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
+          while (effectiveNameSize > 6 && ctx.measureText(d.name).width > available) {
+            effectiveNameSize -= 1;
+            ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
+          }
+        }
+
         if (settings.labelVisible) {
-          ctx.font = (settings.labelBold ? '700 ' : '400 ') + nameSize + 'px Inter, sans-serif';
+          ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
         }
         const nameWidth = settings.labelVisible ? ctx.measureText(d.name).width : 0;
+
+        // For overflow mode: check if label fits inside bar
+        const imgExtra = settings.imagePosition === 'inside' && hasImage ? imgW + gap * 2 : 0;
+        const availableInside = bw - labelMargin * 2 - imgExtra;
+        const overflowToOutside = isInside && settings.labelOverflow === 'overflow' && nameWidth > availableInside;
 
         let imgX = 0;
         let nameX = 0;
         let nameAlign: CanvasTextAlign = 'right';
         let valueX = 0;
         let nameColor = textColor;
-        
+
         if (settings.imagePosition === 'left') {
           imgX = margin.left - gap - imgW;
         } else if (settings.imagePosition === 'inside') {
@@ -733,25 +775,44 @@ export function useChartRenderer() {
 
         if (settings.labelPosition === 'left') {
           nameAlign = 'right';
-          nameX = (settings.imagePosition === 'left' && hasImage) ? imgX - gap : margin.left - (settings.labelMargin ?? 15);
+          nameX = (settings.imagePosition === 'left' && hasImage) ? imgX - gap : margin.left - labelMargin;
         } else if (settings.labelPosition === 'inside-left') {
-          nameAlign = 'left';
-          nameX = margin.left + (settings.labelMargin ?? 15);
-          nameColor = getTextColor(color);
-        } else if (settings.labelPosition === 'inside-right') {
-          nameAlign = 'right';
-          nameColor = getTextColor(color);
-          if (settings.imagePosition === 'inside' && hasImage) {
-            nameX = imgX - gap;
+          if (overflowToOutside) {
+            // overflow: push outside to the right of bar
+            nameAlign = 'left';
+            nameX = margin.left + bw + labelMargin;
           } else {
-            nameX = margin.left + bw - (settings.labelMargin ?? 15);
+            nameAlign = 'left';
+            nameX = margin.left + labelMargin;
+            nameColor = getTextColor(color);
+          }
+        } else if (settings.labelPosition === 'inside-right') {
+          if (overflowToOutside) {
+            // overflow: push outside to the right of bar
+            nameAlign = 'left';
+            nameX = margin.left + bw + labelMargin;
+          } else {
+            nameAlign = 'right';
+            nameColor = getTextColor(color);
+            if (settings.imagePosition === 'inside' && hasImage) {
+              nameX = imgX - gap;
+            } else {
+              nameX = margin.left + bw - labelMargin;
+            }
           }
         } else if (settings.labelPosition === 'right') {
           nameAlign = 'left';
-          nameX = (settings.imagePosition === 'right' && hasImage) ? imgX + imgW + gap : margin.left + bw + (settings.labelMargin ?? 15);
+          nameX = (settings.imagePosition === 'right' && hasImage) ? imgX + imgW + gap : margin.left + bw + labelMargin;
         }
 
-        if (settings.labelPosition === 'right' && settings.imagePosition === 'right' && hasImage) {
+        if (overflowToOutside) {
+          // order: bar tip → value → label
+          valueX = margin.left + bw + labelMargin;
+          ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
+          const valStrW = ctx.measureText(formatValue(d.value, vfmt) + ' ' + settings.unit).width;
+          nameX = valueX + valStrW + gap;
+          nameAlign = 'left';
+        } else if (settings.labelPosition === 'right' && settings.imagePosition === 'right' && hasImage) {
           valueX = nameX + nameWidth + gap;
         } else if (settings.labelPosition === 'right') {
           valueX = nameX + nameWidth + gap;
@@ -773,9 +834,10 @@ export function useChartRenderer() {
           ctx.fillText(d.name, nameX, by + bh / 2);
         }
 
-        ctx.fillStyle = textColor;
+        ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
+        ctx.fillStyle = settings.valueColor || textColor;
         ctx.textAlign = 'left';
-        ctx.fillText(formatValue(d.value) + ' ' + settings.unit, valueX, by + bh / 2);
+        ctx.fillText(formatValue(d.value, vfmt) + ' ' + settings.unit, valueX, by + bh / 2);
       }
     });
 

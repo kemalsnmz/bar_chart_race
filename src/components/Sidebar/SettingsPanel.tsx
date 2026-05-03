@@ -439,6 +439,19 @@ export function SettingsPanel() {
           </div>
         </div>
 
+        {/* Label Overflow — only relevant for inside positions */}
+        {(settings.labelPosition === 'inside-left' || settings.labelPosition === 'inside-right') && (
+          <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Overflow</label>
+            <div className="fl-tabs" style={{ margin: 0 }}>
+              <button className={'fl-color-tab' + (settings.labelOverflow === 'overflow' ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ labelOverflow: 'overflow' })}>Overflow</button>
+              <button className={'fl-color-tab' + (settings.labelOverflow === 'shrink' ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ labelOverflow: 'shrink' })}>Shrink</button>
+            </div>
+          </div>
+        )}
+
         {/* Label Margin */}
         <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Margin</label>
@@ -446,6 +459,38 @@ export function SettingsPanel() {
             value={settings.labelMargin ?? 15}
             onChange={e => updateSettings({ labelMargin: Number(e.target.value) })}
             style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-sub-heading" style={{ marginTop: 16 }}>
+          <span>Value</span>
+          <div className="fl-sub-line" />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Format</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + ((settings.valueFormat ?? 'short') === 'short' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ valueFormat: 'short' })}>Short</button>
+            <button className={'fl-color-tab' + (settings.valueFormat === 'full' ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ valueFormat: 'full' })}>Full</button>
+          </div>
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Font size</label>
+          <input type="number" className="form-input spinner-visible" min={10} max={120} step={1}
+            value={settings.valueFontSize ?? 55}
+            onChange={e => updateSettings({ valueFontSize: Number(e.target.value) })}
+            style={{ width: 64, textAlign: 'center', padding: '3px 4px' }} />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Color</label>
+          <ColorPicker
+            value={settings.valueColor || ''}
+            onChange={v => updateSettings({ valueColor: v })}
+            placeholder="Auto"
+          />
         </div>
 
         <div className="fl-sub-heading" style={{ marginTop: 16 }}>

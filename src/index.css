@@ -249,7 +249,7 @@ body {
   flex: 1;
   display: flex;
   min-height: 0;
-  padding: 14px 16px 16px;
+  padding: 0 16px 0;
   gap: 14px;
 }
 
@@ -260,7 +260,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
 }
 
 /* Chart area */
@@ -272,7 +272,7 @@ body {
   justify-content: center;
   background: linear-gradient(160deg, #f0f1f8 0%, #e8eaf4 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius) var(--radius) 0 0;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.05), var(--shadow-sm);
@@ -524,7 +524,8 @@ body {
 .playback-bar {
   background: var(--bg-panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
   padding: 10px 20px;
   display: flex;
   align-items: center;

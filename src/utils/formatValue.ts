@@ -1,4 +1,9 @@
-export function formatValue(value: number): string {
+export type ValueFormat = 'short' | 'full';
+
+export function formatValue(value: number, format: ValueFormat = 'short'): string {
+  if (format === 'full') {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
   if (value >= 1e12) {
     return (value / 1e12).toFixed(2) + 'T';
   }

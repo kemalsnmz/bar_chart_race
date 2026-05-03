@@ -36,6 +36,7 @@ export type ImageShape = 'rectangle' | 'circle';
 export type BarEndShape = 'round' | 'flat' | 'arrow';
 export type ImagePosition = 'left' | 'inside' | 'right';
 export type LabelPosition = 'left' | 'inside-left' | 'inside-right' | 'right';
+export type LabelOverflow = 'overflow' | 'shrink';
 export type ChartLayout = 'horizontal' | 'vertical';
 
 export interface TickerEntry {
@@ -84,7 +85,11 @@ export interface ChartSettings {
   labelBold: boolean;
   labelColor: string;
   labelPosition: LabelPosition;
+  labelOverflow: LabelOverflow;
   labelMargin: number;
+  valueFontSize: number;
+  valueColor: string;
+  valueFormat: 'short' | 'full';
   barEndShape: BarEndShape;
   imagePosition: ImagePosition;
   barThickness: number;
@@ -210,7 +215,11 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelBold: true,
     labelColor: '',
     labelPosition: 'left',
+    labelOverflow: 'overflow',
     labelMargin: 5,
+    valueFontSize: 55,
+    valueColor: '',
+    valueFormat: 'short',
     barEndShape: 'round',
     imagePosition: 'inside',
     barThickness: 80,
@@ -250,7 +259,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],
     tickerSpeed: 80,
-    tickerFontSize: 14,
+    tickerFontSize: 8,
     tickerBgColor: '#ffffff',
     tickerBgOpacity: 1,
     tickerTextColor: '#000000',
