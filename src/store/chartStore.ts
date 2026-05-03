@@ -35,7 +35,7 @@ export type ImageSizing = 'fill' | 'fit' | 'stretch';
 export type ImageShape = 'rectangle' | 'circle';
 export type BarEndShape = 'round' | 'flat' | 'arrow';
 export type ImagePosition = 'left' | 'inside' | 'right';
-export type LabelPosition = 'left' | 'inside' | 'right';
+export type LabelPosition = 'left' | 'inside-left' | 'inside-right' | 'right';
 export type ChartLayout = 'horizontal' | 'vertical';
 
 export interface TickerEntry {
@@ -61,6 +61,8 @@ export interface ChartSettings {
   titleVisible: boolean;
   titleColor: string;
   maxBars: number;
+  barLengthScale: number;
+  minBarLength: number;
   durationMs: number;
   easing: 'linear' | 'ease-out' | 'ease-in-out' | 'spring';
   unit: string;
@@ -115,8 +117,10 @@ export interface ChartSettings {
   watermarkFontSize: number;
   videoEntries: VideoEntry[];
   gridVisible: boolean;
+  gridColor: string;
   gridOpacity: number;
   gridLabelVisible: boolean;
+  gridLabelColor: string;
   tickerVisible: boolean;
   tickerEntries: TickerEntry[];
   tickerSpeed: number;
@@ -183,6 +187,8 @@ export const useChartStore = create<ChartStore>((set) => ({
     titleVisible: true,
     titleColor: '',
     maxBars: 10,
+    barLengthScale: 100,
+    minBarLength: 80,
     durationMs: 2000,
     easing: 'linear',
     unit: '',
@@ -237,8 +243,10 @@ export const useChartStore = create<ChartStore>((set) => ({
     watermarkFontSize: 20,
     videoEntries: [{ objectUrl: '', fileName: '', from: '', to: '', position: 'bottom-right', width: 30, opacity: 1, offsetX: 0, offsetY: 0 }],
     gridVisible: true,
+    gridColor: '',
     gridOpacity: 0.3,
     gridLabelVisible: true,
+    gridLabelColor: '',
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],
     tickerSpeed: 80,

@@ -249,12 +249,13 @@ export function useChartRenderer() {
         : 0;
 
       // Measure label width to set left margin
-      let neededLeft = physicalWidth * (isPortrait ? 0.22 : 0.14);
+      let neededLeft = physicalWidth * 0.03; // minimal padding when no label on left
       if (settings.labelVisible && settings.labelPosition === 'left' && approxNameSize > 0) {
+        const minLeft = physicalWidth * (isPortrait ? 0.22 : 0.14);
         ctx.font = (settings.labelBold ? '700 ' : '400 ') + approxNameSize + 'px Inter, sans-serif';
         const maxLW = Math.max(...allNames.map(n => ctx.measureText(n).width));
         const imgExtra = settings.imagePosition === 'left' ? settings.imageWidth + (settings.imageMarginRight || 10) : 0;
-        neededLeft = Math.max(neededLeft, maxLW + (settings.labelMargin ?? 15) + imgExtra + 12);
+        neededLeft = Math.max(minLeft, maxLW + (settings.labelMargin ?? 15) + imgExtra + 12);
       }
 
       // Measure value width to set right margin
@@ -277,8 +278,13 @@ export function useChartRenderer() {
     const chartHeight = physicalHeight - margin.top - margin.bottom;
     const maxVal = Math.max(...topData.map(d => d.value), 1);
     
-    let xScale = d3.scaleLinear().domain([0, maxVal]).range([0, chartWidth]);
-    let yScale = d3.scaleLinear().domain([0, maxVal]).range([0, chartHeight]);
+    const minLength = settings.minBarLength ?? 80;
+    const scaleFactor = (settings.barLengthScale ?? 100) / 100;
+    const maxScaleWidth = Math.max(minLength, chartWidth * scaleFactor);
+    const maxScaleHeight = Math.max(minLength, chartHeight * scaleFactor);
+    
+    let xScale = d3.scaleLinear().domain([0, maxVal]).range([minLength, maxScaleWidth]);
+    let yScale = d3.scaleLinear().domain([0, maxVal]).range([minLength, maxScaleHeight]);
 
     const totalParts = settings.barThickness + settings.barGap;
     const slotSize = isVertical ? (chartWidth / settings.maxBars) : (chartHeight / settings.maxBars);
@@ -510,10 +516,9 @@ export function useChartRenderer() {
     if (settings.gridVisible !== false && !isVertical) {
       const ticks = xScale.ticks(5).filter((v: number) => v > 0);
       const gridOpacity = settings.gridOpacity ?? 0.12;
-      const labelSize = Math.round(physicalHeight * 0.016);
 
       ctx.save();
-      ctx.strokeStyle = textColor;
+      ctx.strokeStyle = settings.gridColor || textColor;
       ctx.lineWidth = Math.max(1, physicalWidth / 960);
       ctx.globalAlpha = gridOpacity;
 
@@ -549,7 +554,7 @@ export function useChartRenderer() {
 
           // label text at full contrast
           ctx.globalAlpha = Math.min(1, gridOpacity * 4);
-          ctx.fillStyle = textColor;
+          ctx.fillStyle = settings.gridLabelColor || textColor;
           ctx.fillText(label, tx, labelY);
         }
       }
@@ -729,10 +734,18 @@ export function useChartRenderer() {
         if (settings.labelPosition === 'left') {
           nameAlign = 'right';
           nameX = (settings.imagePosition === 'left' && hasImage) ? imgX - gap : margin.left - (settings.labelMargin ?? 15);
-        } else if (settings.labelPosition === 'inside') {
+        } else if (settings.labelPosition === 'inside-left') {
           nameAlign = 'left';
           nameX = margin.left + (settings.labelMargin ?? 15);
           nameColor = getTextColor(color);
+        } else if (settings.labelPosition === 'inside-right') {
+          nameAlign = 'right';
+          nameColor = getTextColor(color);
+          if (settings.imagePosition === 'inside' && hasImage) {
+            nameX = imgX - gap;
+          } else {
+            nameX = margin.left + bw - (settings.labelMargin ?? 15);
+          }
         } else if (settings.labelPosition === 'right') {
           nameAlign = 'left';
           nameX = (settings.imagePosition === 'right' && hasImage) ? imgX + imgW + gap : margin.left + bw + (settings.labelMargin ?? 15);
