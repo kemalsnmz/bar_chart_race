@@ -758,27 +758,28 @@ export function SettingsPanel() {
       {/* ════ Time Counter ════ */}
       <Section title="Time Counter" defaultOpen={false}>
         <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Show Counter</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
-            <button className={'fl-color-tab' + (settings.timeVisible !== false ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ timeVisible: true })}>On</button>
-            <button className={'fl-color-tab' + (settings.timeVisible === false ? ' fl-color-tab-active' : '')}
-              onClick={() => updateSettings({ timeVisible: false })}>Off</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Year</label>
+            <div className="fl-tabs" style={{ margin: 0 }}>
+              <button className={'fl-color-tab' + (settings.timeVisible !== false ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ timeVisible: true })}>On</button>
+              <button className={'fl-color-tab' + (settings.timeVisible === false ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ timeVisible: false })}>Off</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Months</label>
+            <div className="fl-tabs" style={{ margin: 0 }}>
+              <button className={'fl-color-tab' + (settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ timeMonthVisible: true })}>On</button>
+              <button className={'fl-color-tab' + (!settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
+                onClick={() => updateSettings({ timeMonthVisible: false })}>Off</button>
+            </div>
           </div>
         </div>
 
         {settings.timeVisible !== false && (
           <>
-            <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Show Months</label>
-              <div className="fl-tabs" style={{ margin: 0 }}>
-                <button className={'fl-color-tab' + (settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
-                  onClick={() => updateSettings({ timeMonthVisible: true })}>On</button>
-                <button className={'fl-color-tab' + (!settings.timeMonthVisible ? ' fl-color-tab-active' : '')}
-                  onClick={() => updateSettings({ timeMonthVisible: false })}>Off</button>
-              </div>
-            </div>
-
             {settings.timeMonthVisible && (
               <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Month Format</label>
