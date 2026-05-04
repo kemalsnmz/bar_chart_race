@@ -39,15 +39,32 @@ export type LabelPosition = 'left' | 'inside-left' | 'inside-right' | 'right';
 export type LabelOverflow = 'overflow' | 'shrink';
 export type ChartLayout = 'horizontal' | 'vertical';
 
+export interface BackgroundEntry {
+  imageUrl: string;
+  from: string;
+  to: string;
+  opacity: number;
+  tint: number;
+  marginTop: number;
+  marginRight: number;
+  marginBottom: number;
+  marginLeft: number;
+}
+
 export interface TickerEntry {
   text: string;
   from: string;
   to: string;
+  wordColors?: Record<string, string>;
+  marginX?: number;
+  marginY?: number;
 }
 
 export interface VideoEntry {
+  type?: 'video' | 'image';
   objectUrl: string;
   fileName: string;
+  imageUrl?: string;
   from: string;
   to: string;
   position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
@@ -126,6 +143,7 @@ export interface ChartSettings {
   gridOpacity: number;
   gridLabelVisible: boolean;
   gridLabelColor: string;
+  backgroundEntries: BackgroundEntry[];
   tickerVisible: boolean;
   tickerEntries: TickerEntry[];
   tickerSpeed: number;
@@ -256,6 +274,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     gridOpacity: 0.3,
     gridLabelVisible: true,
     gridLabelColor: '',
+    backgroundEntries: [],
     tickerVisible: false,
     tickerEntries: [{ text: '', from: '', to: '' }],
     tickerSpeed: 80,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
-import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry, VideoEntry } from '../../store/chartStore';
+import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry, VideoEntry, BackgroundEntry } from '../../store/chartStore';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -50,6 +50,8 @@ function ColorTab({ id, active, onClick, children }: {
 // ── Main panel ─────────────────────────────────────────
 export function SettingsPanel() {
   const { settings, updateSettings, data, periods } = useChartStore();
+  const [tickerWordSel, setTickerWordSel] = useState<{ entryIdx: number; word: string } | null>(null);
+  const [hoveredClip, setHoveredClip] = useState<number | null>(null);
 
   const allCategories = [...new Set(data.map(d => d.category ?? '(no category)'))];
 
@@ -264,6 +266,128 @@ export function SettingsPanel() {
             </div>
           </>
         )}
+
+        {/* ── Per-period background entries ── */}
+        <div className="fl-sub-heading" style={{ marginTop: 14 }}>
+          <span>Per-period images</span>
+          <div className="fl-sub-line" />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {(settings.backgroundEntries ?? []).map((entry: BackgroundEntry, i: number) => (
+            <div key={i} style={{ background: 'var(--bg-secondary, #f5f5f5)', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Image upload row */}
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <input
+                  className="form-input"
+                  placeholder="https://... or upload →"
+                  value={entry.imageUrl}
+                  onChange={e => {
+                    const updated = [...(settings.backgroundEntries ?? [])];
+                    updated[i] = { ...updated[i], imageUrl: e.target.value };
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 6px', fontSize: 12 }}
+                />
+                <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '0 8px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  Upload
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const updated = [...(settings.backgroundEntries ?? [])];
+                      updated[i] = { ...updated[i], imageUrl: URL.createObjectURL(file) };
+                      updateSettings({ backgroundEntries: updated });
+                    }}
+                  />
+                </label>
+                <button
+                  onClick={() => {
+                    const updated = (settings.backgroundEntries ?? []).filter((_: BackgroundEntry, j: number) => j !== i);
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #aaa)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
+                >×</button>
+              </div>
+
+              {/* From / To */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>FROM</span>
+                <select className="form-input" value={entry.from}
+                  onChange={e => {
+                    const updated = [...(settings.backgroundEntries ?? [])];
+                    updated[i] = { ...updated[i], from: e.target.value };
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>TO</span>
+                <select className="form-input" value={entry.to}
+                  onChange={e => {
+                    const updated = [...(settings.backgroundEntries ?? [])];
+                    updated[i] = { ...updated[i], to: e.target.value };
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ flex: 1, padding: '3px 4px', fontSize: 11 }}>
+                  <option value="">—</option>
+                  {periods.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              {/* Opacity + Tint */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>OPC</span>
+                <input type="number" className="form-input spinner-visible" min={0} max={1} step={0.05}
+                  value={entry.opacity}
+                  onChange={e => {
+                    const updated = [...(settings.backgroundEntries ?? [])];
+                    updated[i] = { ...updated[i], opacity: Number(e.target.value) };
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 4px', fontSize: 11 }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>TINT</span>
+                <input type="number" className="form-input spinner-visible" min={0} max={1} step={0.05}
+                  value={entry.tint}
+                  onChange={e => {
+                    const updated = [...(settings.backgroundEntries ?? [])];
+                    updated[i] = { ...updated[i], tint: Number(e.target.value) };
+                    updateSettings({ backgroundEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 4px', fontSize: 11 }} />
+              </div>
+
+              {/* Margins */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4 }}>
+                {(['marginTop','marginRight','marginBottom','marginLeft'] as const).map(key => (
+                  <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <span style={{ fontSize: 9, color: 'var(--text-secondary, #888)', textTransform: 'uppercase' }}>{key.replace('margin','')}</span>
+                    <input type="number" className="form-input spinner-visible" step={1}
+                      value={entry[key]}
+                      onChange={e => {
+                        const updated = [...(settings.backgroundEntries ?? [])];
+                        updated[i] = { ...updated[i], [key]: Number(e.target.value) };
+                        updateSettings({ backgroundEntries: updated });
+                      }}
+                      style={{ width: '100%', textAlign: 'center', padding: '3px 2px', fontSize: 11 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <button
+            className="fl-color-tab"
+            style={{ width: '100%', padding: '6px', fontSize: 18, fontWeight: 400 }}
+            onClick={() => updateSettings({
+              backgroundEntries: [...(settings.backgroundEntries ?? []), {
+                imageUrl: '', from: '', to: '', opacity: 1, tint: 0,
+                marginTop: 0, marginRight: 0, marginBottom: 0, marginLeft: 0,
+              }]
+            })}
+          >+</button>
+        </div>
       </Section>
 
       {/* ════ Text ════ */}
@@ -884,26 +1008,90 @@ export function SettingsPanel() {
 
         <div className="fl-field" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(settings.videoEntries ?? []).map((entry: VideoEntry, i: number) => (
-            <div key={i} style={{ background: 'var(--bg-secondary, #f5f5f5)', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div key={i}
+              style={{ background: 'var(--bg-secondary, #f5f5f5)', borderRadius: 6, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}
+              onMouseEnter={() => setHoveredClip(i)}
+              onMouseLeave={() => setHoveredClip(null)}
+            >
+              {/* Hover preview */}
+              {hoveredClip === i && (entry.imageUrl || entry.objectUrl || entry.fileName) && (
+                <div style={{
+                  position: 'absolute', bottom: 'calc(100% + 6px)', right: 0,
+                  background: 'var(--bg-panel)', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: 8, zIndex: 100, minWidth: 160, maxWidth: 220,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.18)', pointerEvents: 'none',
+                }}>
+                  {entry.type === 'image' && entry.imageUrl ? (
+                    <>
+                      <img src={entry.imageUrl} alt="" style={{ width: '100%', borderRadius: 4, marginBottom: 6, display: 'block', maxHeight: 120, objectFit: 'contain' }} />
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary, #888)', wordBreak: 'break-all' }}>{entry.fileName || 'Image'}</div>
+                    </>
+                  ) : (entry.objectUrl || entry.fileName) ? (
+                    <>
+                      <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 4 }}>▶ Video</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary, #888)', wordBreak: 'break-all' }}>{entry.fileName || 'video file'}</div>
+                    </>
+                  ) : null}
+                </div>
+              )}
 
-              {/* Upload row */}
+              {/* Type toggle + upload row */}
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '3px 8px', flexShrink: 0 }}>
-                  {entry.fileName ? '↺ Replace' : '▶ Upload'}
-                  <input type="file" accept="video/*" style={{ display: 'none' }}
-                    onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
+                {/* Video / Image toggle */}
+                <div className="fl-tabs" style={{ margin: 0, flexShrink: 0 }}>
+                  <button title="Video" className={'fl-color-tab' + ((entry.type ?? 'video') === 'video' ? ' fl-color-tab-active' : '')}
+                    onClick={() => {
                       const updated = [...(settings.videoEntries ?? [])];
-                      if (updated[i].objectUrl) URL.revokeObjectURL(updated[i].objectUrl);
-                      updated[i] = { ...updated[i], objectUrl: URL.createObjectURL(file), fileName: file.name };
+                      updated[i] = { ...updated[i], type: 'video' };
                       updateSettings({ videoEntries: updated });
-                    }}
-                  />
-                </label>
-                <span style={{ flex: 1, fontSize: 10, color: 'var(--text-secondary, #888)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {entry.fileName || 'no file'}
-                </span>
+                    }}>▶</button>
+                  <button title="Image" className={'fl-color-tab' + (entry.type === 'image' ? ' fl-color-tab-active' : '')}
+                    onClick={() => {
+                      const updated = [...(settings.videoEntries ?? [])];
+                      updated[i] = { ...updated[i], type: 'image' };
+                      updateSettings({ videoEntries: updated });
+                    }}>🖼</button>
+                </div>
+
+                {entry.type === 'image' ? (
+                  <>
+                    <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '3px 8px', flexShrink: 0 }}>
+                      {entry.imageUrl ? '↺' : 'Upload'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const updated = [...(settings.videoEntries ?? [])];
+                          updated[i] = { ...updated[i], imageUrl: URL.createObjectURL(file), fileName: file.name };
+                          updateSettings({ videoEntries: updated });
+                        }}
+                      />
+                    </label>
+                    <span style={{ flex: 1, fontSize: 10, color: 'var(--text-secondary, #888)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entry.fileName || 'no file'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <label className="fl-color-tab" style={{ cursor: 'pointer', padding: '3px 8px', flexShrink: 0 }}>
+                      {entry.fileName ? '↺' : 'Upload'}
+                      <input type="file" accept="video/*" style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const updated = [...(settings.videoEntries ?? [])];
+                          if (updated[i].objectUrl) URL.revokeObjectURL(updated[i].objectUrl);
+                          updated[i] = { ...updated[i], objectUrl: URL.createObjectURL(file), fileName: file.name };
+                          updateSettings({ videoEntries: updated });
+                        }}
+                      />
+                    </label>
+                    <span style={{ flex: 1, fontSize: 10, color: 'var(--text-secondary, #888)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {entry.fileName || 'no file'}
+                    </span>
+                  </>
+                )}
+
                 <button
                   onClick={() => {
                     const updated = (settings.videoEntries ?? []).filter((_: VideoEntry, j: number) => j !== i);
@@ -1082,6 +1270,53 @@ export function SettingsPanel() {
                   title="Remove"
                 >×</button>
               </div>
+
+              {/* Word color selector — click a word to select, then pick color */}
+              {entry.text && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, padding: '5px 6px', background: 'var(--bg-panel)', borderRadius: 5, border: '1px solid var(--border)', cursor: 'default' }}>
+                    {entry.text.split(/\s+/).filter(Boolean).map((word, wi) => {
+                      const isSel = tickerWordSel?.entryIdx === i && tickerWordSel?.word === word;
+                      return (
+                        <span
+                          key={wi}
+                          onClick={() => setTickerWordSel(isSel ? null : { entryIdx: i, word })}
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            color: entry.wordColors?.[word] || settings.tickerTextColor || '#fff',
+                            padding: '1px 4px',
+                            borderRadius: 3,
+                            background: isSel ? 'rgba(100,120,255,0.18)' : 'transparent',
+                            outline: isSel ? '1.5px solid #6478ff' : '1.5px solid transparent',
+                            userSelect: 'none',
+                          }}
+                        >{word}</span>
+                      );
+                    })}
+                  </div>
+                  {tickerWordSel?.entryIdx === i && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>
+                        <b style={{ color: entry.wordColors?.[tickerWordSel.word] || 'inherit' }}>{tickerWordSel.word}</b> rengi
+                      </span>
+                      <ColorPicker
+                        value={entry.wordColors?.[tickerWordSel.word] || ''}
+                        onChange={color => {
+                          const updated = [...(settings.tickerEntries ?? [])];
+                          const wordColors = { ...(updated[i].wordColors ?? {}), [tickerWordSel.word]: color };
+                          if (!color) delete wordColors[tickerWordSel.word];
+                          updated[i] = { ...updated[i], wordColors };
+                          updateSettings({ tickerEntries: updated });
+                        }}
+                        placeholder="Varsayılan"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* From / To row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>FROM</span>
@@ -1106,6 +1341,28 @@ export function SettingsPanel() {
                   <option value="">—</option>
                   {periods.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
+              </div>
+
+              {/* Per-entry margin */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>MARGIN X</span>
+                <input type="number" className="form-input spinner-visible" step={1}
+                  value={entry.marginX ?? 0}
+                  onChange={e => {
+                    const updated = [...(settings.tickerEntries ?? [])];
+                    updated[i] = { ...updated[i], marginX: Number(e.target.value) };
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 4px', fontSize: 11 }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>MARGIN Y</span>
+                <input type="number" className="form-input spinner-visible" step={1}
+                  value={entry.marginY ?? 0}
+                  onChange={e => {
+                    const updated = [...(settings.tickerEntries ?? [])];
+                    updated[i] = { ...updated[i], marginY: Number(e.target.value) };
+                    updateSettings({ tickerEntries: updated });
+                  }}
+                  style={{ width: 52, textAlign: 'center', padding: '3px 4px', fontSize: 11 }} />
               </div>
             </div>
           ))}

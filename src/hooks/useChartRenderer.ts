@@ -145,33 +145,48 @@ export function useChartRenderer() {
     ctx.fillStyle = settings.backgroundColor || '#ffffff';
     ctx.fillRect(0, 0, physicalWidth, physicalHeight);
 
-    const mTop = settings.backgroundMarginTop ?? 0;
-    const mRight = settings.backgroundMarginRight ?? 0;
-    const mBot = settings.backgroundMarginBottom ?? 0;
-    const mLeft = settings.backgroundMarginLeft ?? 0;
+    // Find active background entry for current period
+    const bgCurIdx = periods.indexOf(periods[periodIndex] ?? '');
+    const activeBgEntry = (settings.backgroundEntries ?? []).find(e => {
+      const fi = periods.indexOf(e.from);
+      const ti = periods.indexOf(e.to);
+      if (fi === -1 || ti === -1) return false;
+      const [s, en] = fi <= ti ? [fi, ti] : [ti, fi];
+      return bgCurIdx >= s && bgCurIdx <= en;
+    });
+
+    const mTop   = (activeBgEntry?.marginTop    ?? settings.backgroundMarginTop    ?? 0);
+    const mRight = (activeBgEntry?.marginRight   ?? settings.backgroundMarginRight  ?? 0);
+    const mBot   = (activeBgEntry?.marginBottom  ?? settings.backgroundMarginBottom ?? 0);
+    const mLeft  = (activeBgEntry?.marginLeft    ?? settings.backgroundMarginLeft   ?? 0);
+    const bgOpacity = activeBgEntry?.opacity ?? settings.backgroundOpacity ?? 1;
+    const bgTint    = activeBgEntry?.tint    ?? settings.backgroundTint    ?? 0;
     const bx = mLeft, by = mTop;
     const bw = physicalWidth - mLeft - mRight;
     const bh = physicalHeight - mTop - mBot;
 
-    if (settings.backgroundVideoUrl && bw > 0 && bh > 0) {
-      const video = getBgVideo(settings.backgroundVideoUrl);
+    const activeImageUrl = activeBgEntry?.imageUrl || settings.backgroundImageUrl;
+    const activeVideoUrl = activeBgEntry ? '' : settings.backgroundVideoUrl;
+
+    if (activeVideoUrl && bw > 0 && bh > 0) {
+      const video = getBgVideo(activeVideoUrl);
       if (video.readyState >= 2) {
-        ctx.globalAlpha = settings.backgroundOpacity ?? 1;
+        ctx.globalAlpha = bgOpacity;
         ctx.drawImage(video, bx, by, bw, bh);
         ctx.globalAlpha = 1;
       }
-    } else if (settings.backgroundImageUrl) {
-      loadImage(settings.backgroundImageUrl, bumpImgVersion);
-      const bgImg = imageCache.get(settings.backgroundImageUrl);
+    } else if (activeImageUrl) {
+      loadImage(activeImageUrl, bumpImgVersion);
+      const bgImg = imageCache.get(activeImageUrl);
       if (bgImg && bw > 0 && bh > 0) {
-        ctx.globalAlpha = settings.backgroundOpacity ?? 1;
+        ctx.globalAlpha = bgOpacity;
         drawImageInBox(ctx, bgImg, bx, by, bw, bh, 'fill', 'rectangle');
         ctx.globalAlpha = 1;
       }
     }
 
-    if ((settings.backgroundTint ?? 0) > 0) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${settings.backgroundTint})`;
+    if (bgTint > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${bgTint})`;
       ctx.fillRect(0, 0, physicalWidth, physicalHeight);
     }
 
@@ -462,8 +477,8 @@ export function useChartRenderer() {
           }
         }
 
-        const mb = settings.tickerMarginBottom ?? 0;
-        const mx = settings.tickerMarginX ?? 0;
+        const mb = (activeEntry?.marginY ?? 0) + (settings.tickerMarginBottom ?? 0);
+        const mx = (activeEntry?.marginX ?? 0) + (settings.tickerMarginX ?? 0);
         const fontSize = Math.round(physicalHeight * (settings.tickerFontSize / 220));
         const padX = fontSize * 0.9;
         const padY = fontSize * 0.6;
@@ -503,28 +518,22 @@ export function useChartRenderer() {
 
         ctx.save();
 
-        // Background fill
-        ctx.globalAlpha = settings.tickerBgOpacity * fadeAlpha;
-        ctx.fillStyle = settings.tickerBgColor;
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-        ctx.fill();
-
-        // Border
-        ctx.globalAlpha = 0.18 * fadeAlpha;
-        ctx.strokeStyle = settings.tickerTextColor;
-        ctx.lineWidth = Math.max(1, physicalWidth / 960);
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-        ctx.stroke();
-
-        // Text lines
+        // Text lines — word-by-word coloring (no background/border)
         ctx.globalAlpha = fadeAlpha;
-        ctx.fillStyle = settings.tickerTextColor;
         ctx.textBaseline = 'middle';
-        ctx.textAlign = 'center';
-        lines.forEach((line, i) => {
-          ctx.fillText(line, boxX + boxW / 2, boxY + padY + i * lineHeight + lineHeight / 2);
+        const wordColors = activeEntry?.wordColors ?? {};
+        const spaceW = ctx.measureText(' ').width;
+        lines.forEach((line, li) => {
+          const lineY = boxY + padY + li * lineHeight + lineHeight / 2;
+          const words = line.split(' ');
+          const lineW = words.reduce((acc, w) => acc + ctx.measureText(w).width, 0) + spaceW * (words.length - 1);
+          let wx = boxX + (boxW - lineW) / 2;
+          for (const word of words) {
+            ctx.fillStyle = wordColors[word] || settings.tickerTextColor;
+            ctx.textAlign = 'left';
+            ctx.fillText(word, wx, lineY);
+            wx += ctx.measureText(word).width + spaceW;
+          }
         });
 
         ctx.restore();
@@ -581,40 +590,65 @@ export function useChartRenderer() {
       ctx.restore();
     }
 
-    // Video Clips
+    // Video / Image Clips
     const curIdx2 = periods.indexOf(currentPeriod);
     for (const clip of (settings.videoEntries ?? [])) {
-      if (!clip.objectUrl) continue;
+      const isImageClip = clip.type === 'image';
+      if (!isImageClip && !clip.objectUrl) continue;
+      if (isImageClip && !clip.imageUrl) continue;
+
       const fi = periods.indexOf(clip.from);
       const ti = periods.indexOf(clip.to);
       if (fi === -1 || ti === -1) continue;
       const [cs, ce] = fi <= ti ? [fi, ti] : [ti, fi];
       if (curIdx2 < cs || curIdx2 > ce) continue;
 
-      const video = getClipVideo(clip.objectUrl);
-      if (video.readyState < 2) continue;
-
-      const clipW = physicalWidth * (clip.width / 100);
-      const aspect = video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
-      const clipH = clipW / aspect;
+      let clipW: number, clipH: number;
       const pad = physicalWidth * 0.03;
-
-      let cx = 0, cy = 0;
-      switch (clip.position) {
-        case 'top-left':     cx = pad;                         cy = pad; break;
-        case 'top-right':    cx = physicalWidth - clipW - pad; cy = pad; break;
-        case 'bottom-left':  cx = pad;                         cy = physicalHeight - clipH - pad; break;
-        case 'bottom-right': cx = physicalWidth - clipW - pad; cy = physicalHeight - clipH - pad; break;
-        case 'center':       cx = (physicalWidth - clipW) / 2; cy = (physicalHeight - clipH) / 2; break;
-      }
-      cx += (clip.offsetX ?? 0);
-      cy += (clip.offsetY ?? 0);
-
       const fa = clipFadeAlpha(curIdx2, fi, ti, t);
-      ctx.save();
-      ctx.globalAlpha = (clip.opacity ?? 1) * fa;
-      ctx.drawImage(video, cx, cy, clipW, clipH);
-      ctx.restore();
+
+      if (isImageClip) {
+        loadImage(clip.imageUrl!, bumpImgVersion);
+        const img = imageCache.get(clip.imageUrl!);
+        if (!img) continue;
+        clipW = physicalWidth * (clip.width / 100);
+        const aspect = img.naturalWidth > 0 ? img.naturalWidth / img.naturalHeight : 1;
+        clipH = clipW / aspect;
+        let cx = 0, cy = 0;
+        switch (clip.position) {
+          case 'top-left':     cx = pad;                         cy = pad; break;
+          case 'top-right':    cx = physicalWidth - clipW - pad; cy = pad; break;
+          case 'bottom-left':  cx = pad;                         cy = physicalHeight - clipH - pad; break;
+          case 'bottom-right': cx = physicalWidth - clipW - pad; cy = physicalHeight - clipH - pad; break;
+          case 'center':       cx = (physicalWidth - clipW) / 2; cy = (physicalHeight - clipH) / 2; break;
+        }
+        cx += (clip.offsetX ?? 0);
+        cy += (clip.offsetY ?? 0);
+        ctx.save();
+        ctx.globalAlpha = (clip.opacity ?? 1) * fa;
+        ctx.drawImage(img, cx, cy, clipW, clipH);
+        ctx.restore();
+      } else {
+        const video = getClipVideo(clip.objectUrl);
+        if (video.readyState < 2) continue;
+        clipW = physicalWidth * (clip.width / 100);
+        const aspect = video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
+        clipH = clipW / aspect;
+        let cx = 0, cy = 0;
+        switch (clip.position) {
+          case 'top-left':     cx = pad;                         cy = pad; break;
+          case 'top-right':    cx = physicalWidth - clipW - pad; cy = pad; break;
+          case 'bottom-left':  cx = pad;                         cy = physicalHeight - clipH - pad; break;
+          case 'bottom-right': cx = physicalWidth - clipW - pad; cy = physicalHeight - clipH - pad; break;
+          case 'center':       cx = (physicalWidth - clipW) / 2; cy = (physicalHeight - clipH) / 2; break;
+        }
+        cx += (clip.offsetX ?? 0);
+        cy += (clip.offsetY ?? 0);
+        ctx.save();
+        ctx.globalAlpha = (clip.opacity ?? 1) * fa;
+        ctx.drawImage(video, cx, cy, clipW, clipH);
+        ctx.restore();
+      }
     }
 
     // Bars
