@@ -57,6 +57,7 @@ function ValueCell({ value, name, time }: { value: number | null; name: string; 
   return <span className="spr-val" onClick={start} title="Click to edit">{value.toLocaleString()}</span>;
 }
 
+
 /* ── Editable name cell ── */
 function NameCell({ name }: { name: string }) {
   const { renameEntity } = useChartStore();
@@ -109,6 +110,24 @@ export function DataPanel() {
   /* ── Multi-col selection ── */
   const [selectedCols, setSelectedCols] = useState<Set<string>>(new Set());
   const lastSelCol = useRef<string | null>(null);
+
+  /* ── New entity editing ── */
+  const [editingExtraRow, setEditingExtraRow] = useState<number | null>(null);
+  const [extraDraft, setExtraDraft] = useState('');
+  const extraInputRef = useRef<HTMLInputElement>(null);
+
+  const commitExtraRow = () => {
+    const t = extraDraft.trim();
+    if (t) {
+      addEntity(t);
+      setRowOrder(prev => {
+        const base = prev ?? [...entities];
+        return [...base, t];
+      });
+    }
+    setEditingExtraRow(null);
+    setExtraDraft('');
+  };
 
   /* ── Context menu ── */
   const [ctx, setCtx] = useState<CtxState | null>(null);
@@ -451,7 +470,28 @@ export function DataPanel() {
                   onContextMenu={e => { e.stopPropagation(); handleRightClick(e, null, null, false); }}
                 >
                   <td className="spr-rownum spr-rownum-extra">{entities.length + i + 2}</td>
-                  <td className="spr-name-cell spr-cell-extra" />
+                  <td
+                    className="spr-name-cell spr-cell-extra spr-name-cell-new"
+                    onClick={e => { e.stopPropagation(); if (editingExtraRow !== i) { setExtraDraft(''); setEditingExtraRow(i); setTimeout(() => extraInputRef.current?.focus(), 0); } }}
+                  >
+                    {editingExtraRow === i ? (
+                      <input
+                        ref={extraInputRef}
+                        className="spr-input spr-input-left"
+                        value={extraDraft}
+                        placeholder="Yeni isim..."
+                        autoFocus
+                        onChange={e => setExtraDraft(e.target.value)}
+                        onBlur={commitExtraRow}
+                        onKeyDown={e => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') commitExtraRow();
+                          if (e.key === 'Escape') { setEditingExtraRow(null); setExtraDraft(''); }
+                        }}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    ) : null}
+                  </td>
                   <td className="spr-cell col-opt spr-cell-extra" />
                   <td className="spr-cell col-opt spr-cell-extra" />
                   {periods.map((_, pi) => <td key={pi} className="spr-cell spr-cell-extra" />)}

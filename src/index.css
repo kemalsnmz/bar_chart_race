@@ -937,6 +937,8 @@ body {
 .spr-row-extra .spr-rownum { color: #ddd; }
 .spr-extra-header { background: #f4f4f8 !important; border-color: #eeeef6 !important; }
 .spr-rownum-extra { color: #ddd; }
+.spr-name-cell-new { cursor: text !important; }
+.spr-name-cell-new:hover { background: rgba(99,102,241,.08) !important; }
 
 /* ===== COLUMN MAPPER ===== */
 .column-mapper-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
