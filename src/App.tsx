@@ -4,15 +4,15 @@ import { ExportPanel } from './components/Sidebar/ExportPanel';
 import { RaceChart } from './components/Chart/RaceChart';
 import { PlaybackBar } from './components/Chart/PlaybackBar';
 import { DataPanel } from './components/Data/DataPanel';
+import { HomePage } from './components/Home/HomePage';
 import { useCSVParser } from './hooks/useCSVParser';
 import { sampleData, sampleMeta } from './utils/sampleData';
 import { useChartStore } from './store/chartStore';
 
-const RATIOS = ['16:9', '9:16', '1:1'] as const;
-
 type Tab = 'preview' | 'data';
 
 function App() {
+  const [view, setView] = useState<'home' | 'editor'>('home');
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const { parseCSV } = useCSVParser();
   const { setData, data, updateSettings, exportSettings, updateExportSettings } = useChartStore();
@@ -26,11 +26,20 @@ function App() {
     }
   }, []);
 
+  if (view === 'home') {
+    return <HomePage onSelect={() => setView('editor')} />;
+  }
+
   return (
     <div className="app-layout">
       {/* Top bar */}
       <header className="top-bar">
         <div className="brand">
+          <button className="home-back-btn" onClick={() => setView('home')} title="Ana Sayfa">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+          </button>
           <div className="brand-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
               <rect x="2" y="14" width="4" height="8" rx="1"/>
