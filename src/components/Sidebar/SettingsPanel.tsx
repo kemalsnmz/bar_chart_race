@@ -983,17 +983,20 @@ export function SettingsPanel() {
           <div className="fl-slider-ends"><span>Fast</span><span>Slow</span></div>
         </div>
 
-        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Easing</label>
-          <div className="fl-tabs" style={{ margin: 0 }}>
+        <div className="fl-field">
+          <label className="fl-tiny-label">Easing</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
             {([
               { value: 'linear',       label: 'Linear' },
               { value: 'ease-out',     label: 'Ease out' },
               { value: 'ease-in-out',  label: 'Ease in-out' },
               { value: 'spring',       label: 'Spring' },
+              { value: 'bounce',       label: 'Bounce' },
+              { value: 'elastic',      label: 'Elastic' },
             ] as { value: typeof settings.easing; label: string }[]).map(opt => (
               <button key={opt.value}
                 className={'fl-color-tab' + (settings.easing === opt.value ? ' fl-color-tab-active' : '')}
+                style={{ justifyContent: 'center', fontSize: 11 }}
                 onClick={() => updateSettings({ easing: opt.value })}>
                 {opt.label}
               </button>
@@ -1299,7 +1302,7 @@ export function SettingsPanel() {
                   {tickerWordSel?.entryIdx === i && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 11, color: 'var(--text-secondary, #888)', flexShrink: 0 }}>
-                        <b style={{ color: entry.wordColors?.[tickerWordSel.word] || 'inherit' }}>{tickerWordSel.word}</b> rengi
+                        <b style={{ color: entry.wordColors?.[tickerWordSel.word] || 'inherit' }}>{tickerWordSel.word}</b> color
                       </span>
                       <ColorPicker
                         value={entry.wordColors?.[tickerWordSel.word] || ''}
@@ -1310,7 +1313,7 @@ export function SettingsPanel() {
                           updated[i] = { ...updated[i], wordColors };
                           updateSettings({ tickerEntries: updated });
                         }}
-                        placeholder="Varsayılan"
+                        placeholder="Default"
                       />
                     </div>
                   )}

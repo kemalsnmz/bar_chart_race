@@ -82,7 +82,7 @@ export interface ChartSettings {
   barLengthScale: number;
   minBarLength: number;
   durationMs: number;
-  easing: 'linear' | 'ease-out' | 'ease-in-out' | 'spring';
+  easing: 'linear' | 'ease-out' | 'ease-in-out' | 'spring' | 'bounce' | 'elastic';
   unit: string;
   palette: PaletteName;
   backgroundColor: string;
@@ -213,7 +213,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     barLengthScale: 100,
     minBarLength: 80,
     durationMs: 2000,
-    easing: 'linear',
+    easing: 'ease-out',
     unit: '',
     palette: 'vivid',
     backgroundColor: '#171F2F',

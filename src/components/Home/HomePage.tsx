@@ -104,28 +104,28 @@ const TEMPLATES: Template[] = [
   {
     id: 'bar-chart-race',
     title: 'Bar Chart Race',
-    description: 'Zaman içinde değişen sıralamayı yarışan çubuklarla göster.',
+    description: 'Show changing rankings over time with competing bars.',
     available: true,
     preview: <BarChartRacePreview />,
   },
   {
     id: 'line-chart-race',
     title: 'Line Chart Race',
-    description: 'Çizgi grafikleriyle trend yarışlarını animasyonlu göster.',
+    description: 'Animate trend races with line charts over time.',
     available: false,
     preview: <LineRacePreview />,
   },
   {
     id: 'pie-chart-race',
     title: 'Pie Chart Race',
-    description: 'Pasta dilimlerinin zaman içindeki değişimini canlandır.',
+    description: 'Animate pie slice changes and market share shifts over time.',
     available: false,
     preview: <PieRacePreview />,
   },
   {
     id: 'bubble-chart-race',
     title: 'Bubble Chart Race',
-    description: 'Kabarcık büyüklükleriyle çok boyutlu veriyi animasyonlu sun.',
+    description: 'Present multi-dimensional data with animated bubbles.',
     available: false,
     preview: <BubbleRacePreview />,
   },
@@ -150,15 +150,15 @@ export function HomePage({ onSelect }: HomePageProps) {
           </div>
           <div>
             <h1 className="home-brand-title">Chart Race Studio</h1>
-            <span className="home-brand-sub">Animasyonlu grafik oluşturma platformu</span>
+            <span className="home-brand-sub">Animated chart creation platform</span>
           </div>
         </div>
       </header>
 
       <main className="home-main">
         <div className="home-hero">
-          <h2 className="home-hero-title">Grafik türünü seç</h2>
-          <p className="home-hero-sub">Verinle hayat ver — bir şablon seçerek başla</p>
+          <h2 className="home-hero-title">Choose a chart type</h2>
+          <p className="home-hero-sub">Bring your data to life — start by picking a template</p>
         </div>
 
         <div className="home-grid">
@@ -172,7 +172,7 @@ export function HomePage({ onSelect }: HomePageProps) {
                 {tpl.preview}
                 {!tpl.available && (
                   <div className="home-card-soon-overlay">
-                    <span>Yakında</span>
+                    <span>Coming Soon</span>
                   </div>
                 )}
               </div>
@@ -180,14 +180,14 @@ export function HomePage({ onSelect }: HomePageProps) {
                 <div className="home-card-title-row">
                   <span className="home-card-title">{tpl.title}</span>
                   {tpl.available
-                    ? <span className="home-card-badge home-card-badge-ready">Hazır</span>
-                    : <span className="home-card-badge home-card-badge-soon">Yakında</span>
+                    ? <span className="home-card-badge home-card-badge-ready">Ready</span>
+                    : <span className="home-card-badge home-card-badge-soon">Coming Soon</span>
                   }
                 </div>
                 <p className="home-card-desc">{tpl.description}</p>
                 {tpl.available && (
                   <button className="home-card-btn">
-                    Oluşturmaya Başla
+                    Start Creating
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>

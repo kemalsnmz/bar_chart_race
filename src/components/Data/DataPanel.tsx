@@ -4,6 +4,7 @@ import { useCSVParser } from '../../hooks/useCSVParser';
 import { ColumnMapper } from '../Sidebar/ColumnMapper';
 import { ContextMenu } from './ContextMenu';
 import { sampleData, sampleImages } from '../../utils/sampleData';
+import { getCountryFlagUrl } from '../../utils/countryFlags';
 
 const EXTRA_ROWS = 30;
 const EXTRA_COLS = 8;
@@ -115,6 +116,50 @@ export function DataPanel() {
   const [editingExtraRow, setEditingExtraRow] = useState<number | null>(null);
   const [extraDraft, setExtraDraft] = useState('');
   const extraInputRef = useRef<HTMLInputElement>(null);
+
+  /* ── New period editing ── */
+  const [editingExtraCol, setEditingExtraCol] = useState<number | null>(null);
+  const [extraColDraft, setExtraColDraft] = useState('');
+  const extraColInputRef = useRef<HTMLInputElement>(null);
+
+  const commitExtraCol = () => {
+    const t = extraColDraft.trim();
+    if (t) addPeriod(t);
+    setEditingExtraCol(null);
+    setExtraColDraft('');
+  };
+
+  /* ── Google Sheets import ── */
+  const [showSheets, setShowSheets] = useState(false);
+  const [sheetsUrl, setSheetsUrl] = useState('');
+  const [sheetsLoading, setSheetsLoading] = useState(false);
+  const [sheetsError, setSheetsError] = useState('');
+
+  const handleSheetsLoad = async () => {
+    const url = sheetsUrl.trim();
+    if (!url) return;
+    const match = url.match(/\/spreadsheets\/d\/([^/]+)/);
+    if (!match) { setSheetsError('Please enter a valid Google Sheets URL.'); return; }
+    const id = match[1];
+    const gidMatch = url.match(/[#&?]gid=(\d+)/);
+    const gid = gidMatch ? gidMatch[1] : '0';
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+    setSheetsLoading(true);
+    setSheetsError('');
+    try {
+      const res = await fetch(csvUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status} — Make sure the sheet is publicly accessible.`);
+      const text = await res.text();
+      const columns = await parseHeaders(text);
+      setPendingCSV({ file: text as unknown as File, columns });
+      setShowSheets(false);
+      setSheetsUrl('');
+    } catch (err) {
+      setSheetsError(String(err));
+    } finally {
+      setSheetsLoading(false);
+    }
+  };
 
   const commitExtraRow = () => {
     const t = extraDraft.trim();
@@ -271,6 +316,20 @@ export function DataPanel() {
     });
   }, [entities, data, updateImageUrl]);
 
+  /* ── Auto-fill flag URLs ── */
+  const handleAutoFillFlags = useCallback(() => {
+    let filled = 0;
+    entities.forEach(name => {
+      const existing = data.find(d => d.name === name)?.imageUrl ?? '';
+      if (!existing) {
+        const url = getCountryFlagUrl(name);
+        if (url) { updateImageUrl(name, url); filled++; }
+      }
+    });
+    if (filled === 0) alert('No recognized country names found. Make sure entity names are spelled correctly.');
+    else alert(`Flag images added for ${filled} entities.`);
+  }, [entities, data, updateImageUrl]);
+
   /* ── File upload ── */
   const handleFile = async (file: File) => {
     if (!file.name.endsWith('.csv') && file.type !== 'text/csv') { alert('Please upload a CSV file.'); return; }
@@ -298,15 +357,58 @@ export function DataPanel() {
           onDragOver={e => e.preventDefault()}
           onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
           onClick={() => fileInputRef.current?.click()}>
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ flexShrink: 0 }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <span>Drop CSV or click to upload</span>
+          <span>Upload or drag a CSV file</span>
           <input type="file" accept=".csv" ref={fileInputRef} className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
         </div>
-        <button className="btn btn-primary data-sample-btn" onClick={loadSample}>Sample Data</button>
+
+        <div className="data-upload-actions">
+          <button
+            className={'data-action-btn' + (showSheets ? ' data-action-btn-active' : '')}
+            onClick={e => { e.stopPropagation(); setShowSheets(s => !s); setSheetsError(''); }}
+            title="Import from Google Sheets"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18M3 15h18M9 3v18"/>
+            </svg>
+            <span>Sheets</span>
+          </button>
+          <button className="data-action-btn data-action-btn-primary" onClick={loadSample}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span>Sample Data</span>
+          </button>
+        </div>
       </div>
+
+      {showSheets && (
+        <div className="sheets-import-bar" onClick={e => e.stopPropagation()}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34a853" strokeWidth={2} style={{ flexShrink: 0 }}>
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M3 9h18M3 15h18M9 3v18"/>
+          </svg>
+          <input
+            className="sheets-url-input"
+            placeholder="https://docs.google.com/spreadsheets/d/..."
+            value={sheetsUrl}
+            onChange={e => setSheetsUrl(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSheetsLoad(); if (e.key === 'Escape') setShowSheets(false); }}
+            autoFocus
+          />
+          <button className="sheets-load-btn" onClick={handleSheetsLoad} disabled={sheetsLoading}>
+            {sheetsLoading ? '…' : 'Load'}
+          </button>
+          {sheetsError && <span className="sheets-error">{sheetsError}</span>}
+        </div>
+      )}
 
       {pendingCSV && <ColumnMapper />}
 
@@ -368,11 +470,18 @@ export function DataPanel() {
                       <span className={`type-badge ${col.type}`}>{col.type === 'img' ? '🖼' : 'ABC'}</span>
                       <div className="cdesc-label">{col.label}</div>
                       {col.type === 'img' && (
-                        <button
-                          className="img-autofill-btn"
-                          onClick={e => { e.stopPropagation(); handleAutoFillImages(); }}
-                          title="Auto-fill image URLs from a URL template"
-                        >Auto</button>
+                        <>
+                          <button
+                            className="img-autofill-btn"
+                            onClick={e => { e.stopPropagation(); handleAutoFillImages(); }}
+                            title="Auto-fill image URLs from a URL template"
+                          >Auto</button>
+                          <button
+                            className="img-autofill-btn img-flags-btn"
+                            onClick={e => { e.stopPropagation(); handleAutoFillFlags(); }}
+                            title="Auto-fill flag images from country names"
+                          >🏳 Flags</button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -407,7 +516,23 @@ export function DataPanel() {
                   </td>
                 ))}
                 {Array.from({ length: EXTRA_COLS }, (_, i) => (
-                  <td key={`xn${i}`} className="spr-colname spr-extra-header" />
+                  <td key={`xn${i}`} className="spr-colname spr-extra-header spr-period-new"
+                    onClick={e => { e.stopPropagation(); if (editingExtraCol !== i) { setExtraColDraft(''); setEditingExtraCol(i); setTimeout(() => extraColInputRef.current?.focus(), 0); } }}
+                  >
+                    {editingExtraCol === i ? (
+                      <input
+                        ref={extraColInputRef}
+                        className="spr-input"
+                        value={extraColDraft}
+                        placeholder="Period..."
+                        autoFocus
+                        onChange={e => setExtraColDraft(e.target.value)}
+                        onBlur={commitExtraCol}
+                        onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') commitExtraCol(); if (e.key === 'Escape') { setEditingExtraCol(null); setExtraColDraft(''); } }}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    ) : <span className="spr-period-new-hint">+</span>}
+                  </td>
                 ))}
               </tr>
             </thead>
@@ -479,7 +604,7 @@ export function DataPanel() {
                         ref={extraInputRef}
                         className="spr-input spr-input-left"
                         value={extraDraft}
-                        placeholder="Yeni isim..."
+                        placeholder="New name..."
                         autoFocus
                         onChange={e => setExtraDraft(e.target.value)}
                         onBlur={commitExtraRow}

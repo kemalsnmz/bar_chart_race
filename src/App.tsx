@@ -121,7 +121,7 @@ function App() {
         <div className="top-bar-space" />
 
         {/* Right: studio logo → goes to home */}
-        <button className="studio-home-btn" onClick={() => setView('home')} title="Ana Sayfaya Dön">
+        <button className="studio-home-btn" onClick={() => setView('home')} title="Go to Home">
           <div className="studio-home-icon">
             {/* Lego-style stacked blocks icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -135,7 +135,7 @@ function App() {
           </div>
           <div className="studio-home-text">
             <span className="studio-home-name">Chart Race Studio</span>
-            <span className="studio-home-sub">Ana Sayfa</span>
+            <span className="studio-home-sub">Home</span>
           </div>
         </button>
 
