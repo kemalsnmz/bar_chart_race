@@ -666,8 +666,14 @@ export function useChartRenderer() {
 
     // Bars
     topData.forEach((d) => {
-      const rank = interpolate(prevRankMap.get(d.name) ?? settings.maxBars, currRankMap.get(d.name) ?? settings.maxBars, et);
+      const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
+      const currRank = currRankMap.get(d.name) ?? settings.maxBars;
+      const rank = interpolate(prevRank, currRank, et);
       if (rank >= settings.maxBars) return;
+
+      // Image spin: one full 360° when rising up in rank (if enabled)
+      const isRising = currRank < prevRank;
+      const spinAngle = (settings.imageSpinOnRise && isRising) ? t * 2 * Math.PI : 0;
 
       const color = colorMap.get(d.name) ?? '#6c63ff';
       const nameSize = settings.labelVisible ? Math.round(barThicknessPx * (settings.labelFontSize / 100)) : 0;
@@ -682,13 +688,12 @@ export function useChartRenderer() {
       const gap = settings.imageMarginRight || 10;
 
       if (hasImage) {
-        const aspect = cachedImg.width / cachedImg.height;
         if (isVertical) {
           imgW = barThicknessPx;
-          imgH = imgW / aspect;
+          imgH = imgW / (cachedImg.width / cachedImg.height);
         } else {
-          imgH = barThicknessPx;
-          imgW = imgH * aspect;
+          imgH = Math.min(barThicknessPx, imgH);
+          // imgW stays as settings.imageWidth — fixed width for all entities
         }
       }
 
@@ -750,7 +755,13 @@ export function useChartRenderer() {
           else if (settings.imagePosition === 'right') imgY = by - imgH - gap; // top is right equivalent
           else if (settings.imagePosition === 'left') imgY = physicalHeight - margin.bottom + gap; // bottom is left equivalent
           
+          const imgCX = bx + bw / 2, imgCY = imgY + imgH / 2;
+          ctx.save();
+          ctx.translate(imgCX, imgCY);
+          ctx.rotate(spinAngle);
+          ctx.translate(-imgCX, -imgCY);
           drawImageInBox(ctx, cachedImg, bx + (bw - imgW) / 2, imgY, imgW, imgH, settings.imageSizing, settings.imageShape);
+          ctx.restore();
         }
 
         // Names vertical at bottom
@@ -871,7 +882,13 @@ export function useChartRenderer() {
 
         if (hasImage) {
           const imgY = by + (bh - imgH) / 2;
+          const imgCX = imgX + imgW / 2, imgCY = imgY + imgH / 2;
+          ctx.save();
+          ctx.translate(imgCX, imgCY);
+          ctx.rotate(spinAngle);
+          ctx.translate(-imgCX, -imgCY);
           drawImageInBox(ctx, cachedImg, imgX, imgY, imgW, imgH, settings.imageSizing, settings.imageShape);
+          ctx.restore();
         }
 
         if (settings.labelVisible) {

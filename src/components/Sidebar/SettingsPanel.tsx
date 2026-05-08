@@ -1003,6 +1003,21 @@ export function SettingsPanel() {
             ))}
           </div>
         </div>
+
+        <div className="fl-sub-heading">
+          <span>Image</span>
+          <div className="fl-sub-line" />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Spin on rise</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (!settings.imageSpinOnRise ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ imageSpinOnRise: false })}>Off</button>
+            <button className={'fl-color-tab' + (settings.imageSpinOnRise ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ imageSpinOnRise: true })}>On</button>
+          </div>
+        </div>
       </Section>
 
 

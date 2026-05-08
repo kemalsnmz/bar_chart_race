@@ -97,6 +97,7 @@ export interface ChartSettings {
   imageMarginRight: number;
   imageSizing: ImageSizing;
   imageShape: ImageShape;
+  imageSpinOnRise: boolean;
   labelVisible: boolean;
   labelFontSize: number;
   labelBold: boolean;
@@ -228,6 +229,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     imageMarginRight: 4,
     imageSizing: 'fill',
     imageShape: 'circle',
+    imageSpinOnRise: false,
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
