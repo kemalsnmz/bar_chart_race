@@ -519,7 +519,7 @@ export function useChartRenderer() {
         if (current) lines.push(current);
 
         const boxH = lines.length * lineHeight + padY * 2;
-        const radius = Math.min(boxH * 0.25, fontSize * 0.5);
+
 
         // Total counter Y anchor
         const totalY = isVertical

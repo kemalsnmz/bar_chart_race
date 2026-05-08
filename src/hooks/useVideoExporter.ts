@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { toBlobURL } from '@ffmpeg/util';
 import { useChartStore } from '../store/chartStore';
 import { useChartRenderer } from './useChartRenderer';
 
@@ -87,7 +87,7 @@ export function useVideoExporter() {
 
     const fileData  = await ffmpeg.readFile('output.mp4');
     const finalBlob = new Blob(
-      [new Uint8Array(fileData as ArrayBuffer).buffer],
+      [(fileData as Uint8Array).buffer as ArrayBuffer],
       { type: 'video/mp4' }
     );
 

@@ -613,7 +613,7 @@ export function SettingsPanel() {
           <ColorPicker
             value={settings.valueColor || ''}
             onChange={v => updateSettings({ valueColor: v })}
-            placeholder="Auto"
+            label="Auto"
           />
         </div>
 
@@ -1313,7 +1313,7 @@ export function SettingsPanel() {
                           updated[i] = { ...updated[i], wordColors };
                           updateSettings({ tickerEntries: updated });
                         }}
-                        placeholder="Default"
+                        label="Default"
                       />
                     </div>
                   )}
