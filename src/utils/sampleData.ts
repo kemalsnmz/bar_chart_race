@@ -144,6 +144,27 @@ Meta,135,2023
 NVIDIA,61,2023
 Netflix,33,2023`;
 
+// Line Chart Race — transposed format (date rows, entity columns)
+export const sampleLineData = `date,Apple,Amazon,Microsoft,Google,Meta,NVIDIA,Netflix
+image,https://cdn.simpleicons.org/apple,https://cdn.simpleicons.org/amazon,https://cdn.simpleicons.org/microsoft,https://cdn.simpleicons.org/google,https://cdn.simpleicons.org/meta,https://cdn.simpleicons.org/nvidia,https://cdn.simpleicons.org/netflix
+2012,156,61,74,50,5,4,3
+2013,170,74,78,56,8,4,4
+2014,183,89,87,66,12,4,5
+2015,234,107,93,75,18,5,7
+2016,216,136,85,90,28,7,9
+2017,229,178,90,111,40,10,11
+2018,266,233,110,137,56,12,16
+2019,260,281,126,162,71,12,20
+2020,274,386,143,183,86,17,25
+2021,365,470,168,258,118,17,30
+2022,394,514,198,283,117,27,32
+2023,383,575,212,307,135,61,33`;
+
+export const sampleLineMeta = {
+  title: 'Tech Giants Annual Revenue',
+  unit: 'B$',
+};
+
 export const sampleMeta = {
   title: 'Tech Giants Annual Revenue',
   unit: 'B$',

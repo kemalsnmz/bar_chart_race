@@ -1005,6 +1005,37 @@ export function SettingsPanel() {
         </div>
 
         <div className="fl-sub-heading">
+          <span>Spring Physics</span>
+          <div className="fl-sub-line" />
+        </div>
+
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Spring mode</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (!settings.springEnabled ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ springEnabled: false })}>Off</button>
+            <button className={'fl-color-tab' + (settings.springEnabled ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ springEnabled: true })}>On</button>
+          </div>
+        </div>
+
+        {settings.springEnabled && (
+          <div className="fl-field">
+            <label className="fl-tiny-label">Motion preset</label>
+            <div className="fl-tabs" style={{ margin: 0 }}>
+              {(['smooth', 'cinematic', 'energetic'] as const).map(p => (
+                <button key={p}
+                  className={'fl-color-tab' + (settings.springPreset === p ? ' fl-color-tab-active' : '')}
+                  style={{ flex: 1, justifyContent: 'center', textTransform: 'capitalize' }}
+                  onClick={() => updateSettings({ springPreset: p })}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="fl-sub-heading">
           <span>Image</span>
           <div className="fl-sub-line" />
         </div>

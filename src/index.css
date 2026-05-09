@@ -1921,3 +1921,213 @@ body {
   flex-shrink: 0;
 }
 .home-back-btn:hover { background: var(--bg); color: var(--text); }
+
+/* ═══════════════════════════════════════════
+   LINE CHART RACE — specific styles
+   ═══════════════════════════════════════════ */
+
+/* Upload zone */
+.line-upload-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  margin: 16px;
+  padding: 48px 32px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+  background: var(--bg-subtle);
+}
+.line-upload-zone:hover,
+.line-upload-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.line-upload-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.line-upload-zone:hover .line-upload-icon,
+.line-upload-zone.drag-over .line-upload-icon {
+  color: var(--accent);
+  opacity: 1;
+}
+.line-upload-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.line-upload-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.line-upload-example {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-dim);
+  max-width: 320px;
+}
+.line-upload-example-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.line-upload-example pre {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: pre;
+}
+
+/* Data panel */
+.line-data-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.line-data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.line-data-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.line-data-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+.line-data-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.line-data-upload-btn:hover { background: var(--accent-hover); }
+
+.line-data-table-wrap {
+  flex: 1;
+  overflow: auto;
+}
+.line-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.line-data-th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+  z-index: 1;
+}
+.line-data-th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.line-data-row:nth-child(even) { background: var(--bg-subtle); }
+.line-data-td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: right;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.line-data-td.line-data-name {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  position: sticky;
+  left: 0;
+  background: inherit;
+}
+
+/* Line Export Panel */
+.export-panel {
+  padding: 12px 14px;
+}
+.export-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.export-field {
+  flex: 1;
+}
+.export-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, transform 0.1s;
+}
+.export-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.export-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.export-progress .progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.export-progress .progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.export-progress .progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}

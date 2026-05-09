@@ -155,6 +155,9 @@ export interface ChartSettings {
   tickerHeight: number;
   tickerMarginBottom: number;
   tickerMarginX: number;
+
+  springEnabled: boolean;
+  springPreset: 'smooth' | 'cinematic' | 'energetic';
 }
 
 export interface PlaybackState {
@@ -229,7 +232,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     imageMarginRight: 4,
     imageSizing: 'fill',
     imageShape: 'circle',
-    imageSpinOnRise: false,
+    imageSpinOnRise: true,
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
@@ -287,6 +290,8 @@ export const useChartStore = create<ChartStore>((set) => ({
     tickerHeight: 36,
     tickerMarginBottom: 0,
     tickerMarginX: 0,
+    springEnabled: false,
+    springPreset: 'smooth',
   },
 
   playback: {

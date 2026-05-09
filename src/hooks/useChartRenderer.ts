@@ -6,6 +6,7 @@ import { buildBarColors, buildCategoryColors, parseSingleColorText } from '../ut
 import { formatValue } from '../utils/formatValue';
 import type { ValueFormat } from '../utils/formatValue';
 import type { VideoEntry } from '../store/chartStore';
+import type { BarSpringBundle } from '../engine/motion/spring';
 
 const imageCache = new Map<string, HTMLImageElement | null>();
 
@@ -151,7 +152,8 @@ export function useChartRenderer() {
     physicalHeight: number,
     periodIndex: number,
     t: number,
-    _deltaMs: number = 0
+    _deltaMs: number = 0,
+    springStates?: BarSpringBundle,
   ) => {
     const isVertical = settings.layout === 'vertical';
 
@@ -244,9 +246,17 @@ export function useChartRenderer() {
     const allEntities = new Set([...prevDataMap.keys(), ...currDataMap.keys()]);
 
     const interpolatedData: { name: string; value: number }[] = [];
-    for (const name of allEntities) {
-      const val = interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, et);
-      interpolatedData.push({ name, value: val });
+
+    if (springStates) {
+      // Spring mode: use spring positions directly
+      for (const [name, state] of springStates.val) {
+        interpolatedData.push({ name, value: state.pos });
+      }
+    } else {
+      for (const name of allEntities) {
+        const val = interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, et);
+        interpolatedData.push({ name, value: val });
+      }
     }
 
     interpolatedData.sort((a, b) => b.value - a.value);
@@ -668,12 +678,23 @@ export function useChartRenderer() {
     topData.forEach((d) => {
       const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
       const currRank = currRankMap.get(d.name) ?? settings.maxBars;
-      const rank = interpolate(prevRank, currRank, et);
+
+      // Rank: spring mode uses spring rank position; otherwise interpolate
+      let rank: number;
+      if (springStates) {
+        rank = springStates.rank.get(d.name)?.pos ?? interpolatedData.findIndex(x => x.name === d.name);
+      } else {
+        rank = interpolate(prevRank, currRank, et);
+      }
       if (rank >= settings.maxBars) return;
 
       // Image spin: one full 360° when rising up in rank (if enabled)
       const isRising = currRank < prevRank;
       const spinAngle = (settings.imageSpinOnRise && isRising) ? t * 2 * Math.PI : 0;
+
+      // Overtake glow: when spring rank is actively moving to a better position
+      const springRankPos = springStates?.rank.get(d.name)?.pos;
+      const isOvertaking = springStates && springRankPos !== undefined && isRising && t > 0.1 && t < 0.9;
 
       const color = colorMap.get(d.name) ?? '#6c63ff';
       const nameSize = settings.labelVisible ? Math.round(barThicknessPx * (settings.labelFontSize / 100)) : 0;
@@ -713,6 +734,10 @@ export function useChartRenderer() {
 
       ctx.globalAlpha = settings.barOpacity ?? 1;
       ctx.fillStyle = color;
+      if (isOvertaking) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 18;
+      }
       ctx.beginPath();
       
       if (settings.barEndShape === 'flat') {

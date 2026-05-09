@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import { useChartRenderer } from '../../hooks/useChartRenderer';
+import { createBarSpringBundle, stepBarSprings, motionPresets } from '../../engine/motion/spring';
+import type { BarSpringBundle } from '../../engine/motion/spring';
 
 function getCanvasSize(container: HTMLDivElement, ratio: '16:9' | '9:16' | '1:1') {
   const rect = container.getBoundingClientRect();
@@ -28,6 +30,7 @@ export function RaceChart() {
   const rafRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
+  const springRef = useRef<BarSpringBundle>(createBarSpringBundle());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
@@ -126,7 +129,7 @@ export function RaceChart() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const { periods, settings, playback, updatePlayback } = useChartStore.getState();
+      const { data, periods, settings, playback, updatePlayback } = useChartStore.getState();
       if (!playback.isPlaying) return;
 
       if (!lastTimeRef.current) lastTimeRef.current = time;
@@ -142,16 +145,33 @@ export function RaceChart() {
         idx += 1;
       }
 
+      if (idx >= periods.length - 1 && t >= 1) {
+        idx = 0;
+        t = 0;
+        // Reset spring velocities on loop to avoid flyback artifacts
+        if (settings.springEnabled) {
+          for (const s of springRef.current.val.values()) s.vel = 0;
+          for (const s of springRef.current.rank.values()) s.vel = 0;
+        }
+      }
+
       const { w, h } = sizeRef.current;
       if (w && h) {
         const ctx = canvas.getContext('2d')!;
 
-        if (idx >= periods.length - 1 && t >= 1) {
-          idx = 0;
-          t = 0;
+        let activeSpring: BarSpringBundle | undefined;
+        if (settings.springEnabled) {
+          // Build target values from the current period
+          const currentPeriod = periods[idx];
+          const targetValues = new Map(
+            data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value])
+          );
+          const cfg = motionPresets[settings.springPreset ?? 'smooth'];
+          stepBarSprings(springRef.current, targetValues, delta / 1000, cfg);
+          activeSpring = springRef.current;
         }
 
-        drawFrameRef.current(ctx, w, h, idx, t, delta);
+        drawFrameRef.current(ctx, w, h, idx, t, delta, activeSpring);
       }
 
       updatePlayback({ currentPeriodIndex: idx, currentTimeInPeriod: t });

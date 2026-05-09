@@ -112,7 +112,7 @@ const TEMPLATES: Template[] = [
     id: 'line-chart-race',
     title: 'Line Chart Race',
     description: 'Animate trend races with line charts over time.',
-    available: false,
+    available: true,
     preview: <LineRacePreview />,
   },
   {
