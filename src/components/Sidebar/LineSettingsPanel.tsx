@@ -154,18 +154,14 @@ export function LineSettingsPanel() {
               </div>
             </Row>
 
-            <Row label="Color">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {settings.titleColor && (
-                  <button className="fl-color-tab" onClick={() => updateSettings({ titleColor: '' })}
-                    style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
-                )}
-                <ColorPicker
-                  value={settings.titleColor || '#ffffff'}
-                  onChange={v => updateSettings({ titleColor: v })}
-                />
-              </div>
-            </Row>
+            <div className="cp-field">
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Color</label>
+              {settings.titleColor && (
+                <button className="fl-color-tab" onClick={() => updateSettings({ titleColor: '' })}
+                  style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
+              )}
+              <ColorPicker value={settings.titleColor || '#ffffff'} onChange={v => updateSettings({ titleColor: v })} />
+            </div>
           </>
         )}
 
@@ -329,18 +325,14 @@ export function LineSettingsPanel() {
               />
             </div>
 
-            <Row label="Color">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {settings.gridColor && (
-                  <button className="fl-color-tab" onClick={() => updateSettings({ gridColor: '' })}
-                    style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
-                )}
-                <ColorPicker
-                  value={settings.gridColor || '#ffffff'}
-                  onChange={v => updateSettings({ gridColor: v })}
-                />
-              </div>
-            </Row>
+            <div className="cp-field">
+              <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Color</label>
+              {settings.gridColor && (
+                <button className="fl-color-tab" onClick={() => updateSettings({ gridColor: '' })}
+                  style={{ fontSize: 10, padding: '2px 6px' }}>Auto</button>
+              )}
+              <ColorPicker value={settings.gridColor || '#ffffff'} onChange={v => updateSettings({ gridColor: v })} />
+            </div>
           </>
         )}
 

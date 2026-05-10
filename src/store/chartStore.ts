@@ -91,6 +91,7 @@ export interface ChartSettings {
   titleAlign: TextAlign;
   titleBold: boolean;
   titleFontSize: number;
+  titleAnimation: 'none' | 'fade' | 'typewriter';
   barOpacity: number;
   imageHeight: number;
   imageWidth: number;
@@ -112,6 +113,7 @@ export interface ChartSettings {
   imagePosition: ImagePosition;
   barThickness: number;
   barGap: number;
+  rankSwapSpeed: number;
   totalVisible: boolean;
   totalOpacity: number;
   totalMarginX: number;
@@ -217,7 +219,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     barLengthScale: 100,
     minBarLength: 80,
     durationMs: 2000,
-    easing: 'ease-out',
+    easing: 'linear',
     unit: '',
     palette: 'vivid',
     backgroundColor: '#171F2F',
@@ -226,13 +228,14 @@ export const useChartStore = create<ChartStore>((set) => ({
     titleAlign: 'left',
     titleBold: true,
     titleFontSize: 45,
+    titleAnimation: 'none',
     barOpacity: 1.0,
     imageHeight: 40,
     imageWidth: 40,
-    imageMarginRight: 4,
+    imageMarginRight: 1,
     imageSizing: 'fill',
-    imageShape: 'circle',
-    imageSpinOnRise: true,
+    imageShape: 'rectangle',
+    imageSpinOnRise: false,
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
@@ -243,11 +246,12 @@ export const useChartStore = create<ChartStore>((set) => ({
     valueFontSize: 55,
     valueColor: '',
     valueFormat: 'short',
-    barEndShape: 'round',
-    imagePosition: 'inside',
+    barEndShape: 'flat',
+    imagePosition: 'right',
     barThickness: 80,
     barGap: 5,
-    totalVisible: true,
+    rankSwapSpeed: 2.0,
+    totalVisible: false,
     totalOpacity: 0.5,
     totalMarginX: 0,
     totalMarginY: 30,
@@ -259,7 +263,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     timeMarginY: 0,
     timeFontSize: 12,
     timeBold: true,
-    timeOpacity: 0.5,
+    timeOpacity: 1.0,
     layout: 'horizontal',
     backgroundImageUrl: '',
     backgroundVideoUrl: '',

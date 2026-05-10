@@ -459,8 +459,9 @@ body {
 .form-input, .form-select {
   width: 100%;
   padding: 7px 10px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--border-strong);
   border-radius: var(--radius-xs);
   color: var(--text);
   font-family: inherit;
@@ -470,12 +471,11 @@ body {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .form-input:hover, .form-select:hover {
-  border-color: var(--border-strong);
+  border-bottom-color: var(--text);
 }
 .form-input:focus, .form-select:focus {
-  border-color: var(--accent);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(91,82,245,0.12);
+  border-bottom-color: var(--accent);
+  outline: none;
 }
 .form-select { appearance: none; cursor: pointer; }
 .spinner-visible { -moz-appearance: number-input !important; }
@@ -1272,88 +1272,65 @@ body {
 }
 
 /* ===== COLOR PICKER ===== */
-.cp-wrap {
-  position: relative;
-}
+.cp-wrap { position: relative; display: inline-flex; }
 
-/* Trigger button — single color swatch row */
-.cp-trigger {
-  width: 100%;
+/* Color field row — label + swatch left-aligned together */
+.cp-field {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Trigger — small rounded swatch button */
+.cp-swatch-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.15);
   cursor: pointer;
-  font-family: inherit;
-  transition: border-color var(--transition), box-shadow var(--transition);
-}
-.cp-trigger:hover { border-color: var(--border-strong); }
-.cp-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-.cp-preview {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
   flex-shrink: 0;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  transition: transform .12s, box-shadow .12s;
 }
-.cp-hex-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-  font-variant-numeric: tabular-nums;
+.cp-swatch-btn:hover {
+  transform: scale(1.10);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
-/* Popover */
+/* Popover — clean white card */
 .cp-popover {
   position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  top: calc(100% + 8px);
   right: 0;
-  z-index: 200;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  padding: 12px 12px 10px;
-  animation: cp-in .12s ease;
+  z-index: 300;
+  width: 220px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+  padding: 12px;
+  animation: cp-in .13s ease;
 }
 @keyframes cp-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* react-colorful overrides */
-.cp-picker-wrap .react-colorful {
-  width: 100%;
-  height: auto;
-  gap: 10px;
-}
-.cp-picker-wrap .react-colorful__saturation {
-  border-radius: 6px;
-  height: 150px;
-}
-.cp-picker-wrap .react-colorful__hue {
-  height: 14px;
-  border-radius: 7px;
-}
+.cp-picker-wrap .react-colorful { width: 100%; height: auto; gap: 10px; }
+.cp-picker-wrap .react-colorful__saturation { border-radius: 8px; height: 130px; }
+.cp-picker-wrap .react-colorful__hue { height: 12px; border-radius: 6px; }
 .cp-picker-wrap .react-colorful__saturation-pointer,
 .cp-picker-wrap .react-colorful__hue-pointer {
-  width: 18px;
-  height: 18px;
+  width: 16px; height: 16px;
   border: 2px solid #fff;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.35);
 }
 
-/* Inputs row */
+/* HEX + RGB inputs */
 .cp-inputs {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   margin-top: 10px;
 }
 .cp-input-group {
@@ -1368,9 +1345,9 @@ body {
 .cp-input {
   width: 100%;
   padding: 5px 4px;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(0,0,0,0.18);
   color: var(--text);
   font-family: inherit;
   font-size: 12px;
@@ -1378,23 +1355,42 @@ body {
   text-align: center;
   outline: none;
   font-variant-numeric: tabular-nums;
-  transition: border-color var(--transition), box-shadow var(--transition);
-  /* remove number spinners */
   -moz-appearance: textfield;
+  transition: border-color .12s;
 }
 .cp-input::-webkit-outer-spin-button,
 .cp-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.cp-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(108,99,255,0.12);
-}
+.cp-input:focus { border-bottom-color: var(--accent); }
 
 .cp-input-label {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: rgba(0,0,0,0.40);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Preset palette */
+.cp-palette {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+.cp-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  border: 1.5px solid rgba(0,0,0,0.10);
+  cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
+}
+.cp-swatch:hover { transform: scale(1.15); box-shadow: 0 2px 6px rgba(0,0,0,0.22); }
+.cp-swatch-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.35);
 }
 
 /* ===== FLOURISH SETTINGS PANEL ===== */
@@ -1431,7 +1427,7 @@ body {
 }
 
 /* Collapsible section */
-.fl-section { border-bottom: 1px solid var(--border); }
+.fl-section { border-bottom: 1.5px solid var(--border-strong); }
 .fl-section:last-child { border-bottom: none; }
 
 .fl-section-hdr {
@@ -1445,14 +1441,14 @@ body {
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dim);
+  font-weight: 800;
+  color: var(--text);
   transition: background var(--transition), color var(--transition);
   text-align: left;
   letter-spacing: 0.1px;
 }
 .fl-section-hdr:hover { background: var(--bg-subtle); color: var(--text); }
-.fl-section-hdr svg { color: var(--text-muted); transition: color var(--transition); }
+.fl-section-hdr svg { color: var(--text); transition: color var(--transition); }
 .fl-section-hdr:hover svg { color: var(--accent); }
 .fl-section-hdr span { flex: 1; }
 
@@ -1482,7 +1478,7 @@ body {
 .fl-sub-heading span {
   font-size: 10px;
   font-weight: 800;
-  color: var(--text-muted);
+  color: var(--text);
   white-space: nowrap;
   letter-spacing: 0.7px;
   text-transform: uppercase;
@@ -1490,7 +1486,7 @@ body {
 .fl-sub-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, var(--border) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(0,0,0,0.75) 0%, transparent 100%);
 }
 
 /* Tiny uppercase label */
@@ -1498,7 +1494,7 @@ body {
   display: block;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.7px;
   margin-bottom: 6px;
@@ -1571,8 +1567,8 @@ body {
 /* Color mode tabs */
 .fl-tabs {
   display: flex;
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.07);
+  border: none;
   border-radius: var(--radius-sm);
   padding: 3px;
   gap: 2px;
@@ -1580,10 +1576,10 @@ body {
 }
 .fl-color-tab {
   flex: 1;
-  padding: 5px 7px;
+  padding: 5px 10px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text);
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -1592,12 +1588,15 @@ body {
   transition: all var(--transition);
   white-space: nowrap;
 }
-.fl-color-tab:hover { color: var(--text-dim); background: rgba(0,0,0,0.03); }
+.fl-color-tab:hover { background: rgba(0,0,0,0.05); }
 .fl-color-tab-active {
-  background: var(--bg-panel);
+  background: rgba(79,70,229,0.13);
   color: var(--accent);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.09), 0 0 0 1px rgba(0,0,0,0.04);
   font-weight: 700;
+}
+.fl-color-tab-active:hover {
+  background: rgba(79,70,229,0.18);
+  color: var(--accent);
 }
 
 /* Color mode body */

@@ -279,9 +279,9 @@ export function useChartRenderer() {
       };
     } else {
       const isPortrait = physicalWidth < physicalHeight;
-      const topPct = isPortrait ? 0.05 : 0.10;
+      const topPct = isPortrait ? 0.12 : 0.10;
       const approxTop = settings.titleVisible ? physicalHeight * topPct : physicalHeight * 0.03;
-      const approxBot = physicalHeight * 0.04;
+      const approxBot = isPortrait ? physicalHeight * 0.14 : physicalHeight * 0.04;
       const approxChartH = physicalHeight - approxTop - approxBot;
       const totalPartsEst = settings.barThickness + settings.barGap;
       const approxBarH = (approxChartH / settings.maxBars) * (settings.barThickness / totalPartsEst);
@@ -337,20 +337,38 @@ export function useChartRenderer() {
     if (settings.titleVisible) {
       const titleSize = Math.round(physicalHeight * (settings.titleFontSize / 1000));
       const titleWeight = settings.titleBold ? 'bold' : '400';
-      ctx.fillStyle = settings.titleColor || textColor;
       ctx.font = titleWeight + ' ' + titleSize + 'px Inter, sans-serif';
       ctx.textBaseline = 'top';
       const titleY = physicalHeight * 0.04;
+
+      // Animation: fade or typewriter on first period
+      const titleAnim = settings.titleAnimation ?? 'none';
+      const animProgress = periodIndex === 0 ? Math.min(1, t * 2) : 1; // completes in first half of period 0
+      let titleAlpha = 1;
+      let displayTitle = settings.title;
+
+      if (titleAnim === 'fade') {
+        titleAlpha = animProgress;
+      } else if (titleAnim === 'typewriter') {
+        const chars = Math.round(animProgress * settings.title.length);
+        displayTitle = settings.title.slice(0, chars);
+      }
+
+      ctx.save();
+      ctx.globalAlpha = titleAlpha;
+      ctx.fillStyle = settings.titleColor || textColor;
+
       if (settings.titleAlign === 'center') {
         ctx.textAlign = 'center';
-        ctx.fillText(settings.title, physicalWidth / 2, titleY);
+        ctx.fillText(displayTitle, physicalWidth / 2, titleY);
       } else if (settings.titleAlign === 'right') {
         ctx.textAlign = 'right';
-        ctx.fillText(settings.title, physicalWidth * 0.95, titleY);
+        ctx.fillText(displayTitle, physicalWidth * 0.95, titleY);
       } else {
         ctx.textAlign = 'left';
-        ctx.fillText(settings.title, physicalWidth * 0.05, titleY);
+        ctx.fillText(displayTitle, physicalWidth * 0.05, titleY);
       }
+      ctx.restore();
     }
 
     // Period watermark
@@ -363,7 +381,9 @@ export function useChartRenderer() {
       ctx.textBaseline = isVertical ? 'top' : 'bottom';
       
       const baseX = physicalWidth * 0.95 - (settings.timeMarginX ?? 0);
-      let baseY = isVertical ? physicalHeight * 0.05 : physicalHeight * 0.95;
+      let baseY = isVertical
+        ? physicalHeight * 0.05
+        : physicalHeight - margin.bottom * 0.18;
       baseY += (settings.timeMarginY ?? 0);
       
       const baseOpacity = settings.timeOpacity ?? 0.5;
@@ -445,11 +465,15 @@ export function useChartRenderer() {
       ctx.textAlign = 'right';
       ctx.textBaseline = isVertical ? 'top' : 'bottom';
       let totalX = physicalWidth * 0.95 - (settings.totalMarginX ?? 0);
-      let totalY = physicalHeight * 0.95;
+      let totalY: number;
       if (isVertical) {
         totalY = (settings.timeVisible !== false) ? physicalHeight * 0.28 : physicalHeight * 0.05;
       } else {
-        totalY = (settings.timeVisible !== false) ? physicalHeight * 0.73 : physicalHeight * 0.95;
+        // Position total inside bottom margin, above the time watermark
+        const hasTime = settings.timeVisible !== false;
+        totalY = hasTime
+          ? physicalHeight - margin.bottom * 0.60
+          : physicalHeight - margin.bottom * 0.18;
       }
       totalY += (settings.totalMarginY ?? 0);
       ctx.fillText(`Total: ${formatValue(totalVal, vfmt)} ${settings.unit}`, totalX, totalY);
@@ -531,10 +555,13 @@ export function useChartRenderer() {
         const boxH = lines.length * lineHeight + padY * 2;
 
 
-        // Total counter Y anchor
+        // Total counter Y anchor (must match the main total draw above)
+        const hasTime2 = settings.timeVisible !== false;
         const totalY = isVertical
-          ? ((settings.timeVisible !== false) ? physicalHeight * 0.28 : physicalHeight * 0.05)
-          : ((settings.timeVisible !== false) ? physicalHeight * 0.73 : physicalHeight * 0.95);
+          ? (hasTime2 ? physicalHeight * 0.28 : physicalHeight * 0.05)
+          : (hasTime2
+              ? physicalHeight - margin.bottom * 0.60
+              : physicalHeight - margin.bottom * 0.18);
 
         const boxX = physicalWidth * 0.95 - boxW - mx;
         const boxY = totalY - boxH - 10 - mb; // grows upward
@@ -684,7 +711,8 @@ export function useChartRenderer() {
       if (springStates) {
         rank = springStates.rank.get(d.name)?.pos ?? interpolatedData.findIndex(x => x.name === d.name);
       } else {
-        rank = interpolate(prevRank, currRank, et);
+        const rankEt = Math.min(1, et * (settings.rankSwapSpeed ?? 1.0));
+        rank = interpolate(prevRank, currRank, rankEt);
       }
       if (rank >= settings.maxBars) return;
 
