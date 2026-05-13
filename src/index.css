@@ -1081,10 +1081,44 @@ body {
 .cm-wide-more { color: var(--text-muted); font-style: italic; justify-content: center; }
 
 /* Long format fields */
-.cm-fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.cm-field { display: flex; flex-direction: column; gap: 3px; }
-.cm-field-label { font-size: 11px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-.cm-optional { font-size: 10px; font-weight: 400; color: var(--text-dim); background: var(--bg-subtle); padding: 1px 5px; border-radius: 4px; }
+.cm-fields { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+
+.cm-field-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--bg-subtle);
+  transition: background 0.15s;
+}
+.cm-field-row:hover { background: var(--bg-hover, rgba(0,0,0,0.05)); }
+
+.cm-field-left { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+
+.cm-field-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+
+.cm-field-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cm-field-name { font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 5px; }
+.cm-field-desc { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cm-optional { font-size: 9px; font-weight: 500; color: var(--text-muted); background: var(--bg-card); border: 1px solid var(--border); padding: 1px 5px; border-radius: 10px; }
+
+.cm-select-inline {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--border-strong);
+  color: var(--text);
+  font-size: 12px; font-weight: 600;
+  padding: 2px 4px;
+  cursor: pointer;
+  width: 130px; flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.cm-select-inline:focus { outline: none; border-bottom-color: var(--accent); }
+
+/* keep old .cm-select for any legacy refs */
 .cm-select {
   background: var(--bg-input, var(--bg-subtle));
   border: 1px solid var(--border);

@@ -189,6 +189,8 @@ interface ChartStore {
 
   pendingCSV: { file: File | string; columns: string[] } | null;
   setPendingCSV: (p: { file: File | string; columns: string[] } | null) => void;
+  csvPreviewReady: boolean;
+  setCsvPreviewReady: (v: boolean) => void;
 
   setData: (data: DataRow[], periods: string[]) => void;
   updateSettings: (settings: Partial<ChartSettings>) => void;
@@ -239,7 +241,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
-    labelColor: '',
+    labelColor: '#111111',
     labelPosition: 'left',
     labelOverflow: 'overflow',
     labelMargin: 5,
@@ -316,6 +318,8 @@ export const useChartStore = create<ChartStore>((set) => ({
 
   pendingCSV: null,
   setPendingCSV: (p) => set(() => ({ pendingCSV: p })),
+  csvPreviewReady: false,
+  setCsvPreviewReady: (v) => set(() => ({ csvPreviewReady: v })),
 
   setData: (data, periods) => set(() => {
     const enrichedData = data.map(row => ({

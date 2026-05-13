@@ -33,8 +33,15 @@ interface PreviewData {
   rows: DataRow[];
 }
 
+const FIELD_META = {
+  name:  { icon: '🏷', color: '#6366f1', label: 'Name / Label',   desc: 'The entity being tracked (e.g. Country, Company)' },
+  value: { icon: '📊', color: '#10b981', label: 'Value',          desc: 'The numeric value for each period' },
+  time:  { icon: '📅', color: '#f59e0b', label: 'Time / Period',  desc: 'Year, month or date column' },
+  image: { icon: '🖼', color: '#8b5cf6', label: 'Image URL',      desc: 'Optional: flag or logo URL' },
+} as const;
+
 export function ColumnMapper() {
-  const { pendingCSV, setPendingCSV, setData } = useChartStore();
+  const { pendingCSV, setPendingCSV, setData, setCsvPreviewReady } = useChartStore();
   const { parseCSV } = useCSVParser();
 
   const [mapping, setMapping] = useState<ColumnMapping>({ name: '', value: '', time: '', image: '' });
@@ -73,6 +80,9 @@ export function ColumnMapper() {
       }
       const entities = [...new Set(data.map(d => d.name))];
       setPreview({ entities, periods, rows: data });
+      // Load data into store and signal parent to switch to preview tab
+      setData(data, periods);
+      setCsvPreviewReady(true);
       setStep(2);
     } catch (err) {
       setError(String(err));
@@ -82,33 +92,18 @@ export function ColumnMapper() {
   };
 
   const handleLoad = () => {
-    if (!preview) return;
-    setData(preview.rows, preview.periods);
+    setCsvPreviewReady(false);
     setPendingCSV(null);
   };
 
-  const sel = (field: keyof ColumnMapping, label: string, optional = false) => (
-    <div className="cm-field">
-      <label className="cm-field-label">
-        {label}
-        {optional && <span className="cm-optional">optional</span>}
-      </label>
-      <select
-        className="cm-select"
-        value={mapping[field]}
-        onChange={e => setMapping(prev => ({ ...prev, [field]: e.target.value }))}
-      >
-        <option value="">— select —</option>
-        {columns.map(col => (
-          <option key={col} value={col}>{col}</option>
-        ))}
-      </select>
-    </div>
-  );
+  const handleBack = () => {
+    setStep(1);
+    setCsvPreviewReady(false);
+  };
 
   return (
     <div className="cm-wizard">
-      {/* Steps indicator */}
+      {/* Steps */}
       <div className="cm-steps">
         <div className={`cm-step ${step === 1 ? 'cm-step-active' : 'cm-step-done'}`}>
           <span className="cm-step-num">{step > 1 ? '✓' : '1'}</span>
@@ -152,10 +147,37 @@ export function ColumnMapper() {
             </div>
           ) : (
             <div className="cm-fields">
-              {sel('name', 'Name / Label')}
-              {sel('value', 'Value (numeric)')}
-              {sel('time', 'Time / Period')}
-              {sel('image', 'Image URL', true)}
+              {(['name', 'value', 'time', 'image'] as const).map((field, i) => {
+                const meta = FIELD_META[field];
+                const optional = field === 'image';
+                return (
+                  <div key={field} className="cm-field-row">
+                    <div className="cm-field-left">
+                      <span className="cm-field-icon" style={{ background: meta.color + '1a', color: meta.color }}>
+                        {meta.icon}
+                      </span>
+                      <div className="cm-field-text">
+                        <span className="cm-field-name">
+                          {meta.label}
+                          {optional && <span className="cm-optional">optional</span>}
+                        </span>
+                        <span className="cm-field-desc">{meta.desc}</span>
+                      </div>
+                    </div>
+                    <select
+                      className="cm-select-inline"
+                      value={mapping[field]}
+                      onChange={e => setMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                      style={{ borderBottomColor: mapping[field] ? meta.color : undefined }}
+                    >
+                      <option value="">— select —</option>
+                      {columns.map(col => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -170,7 +192,7 @@ export function ColumnMapper() {
         </>
       )}
 
-      {/* Step 2 — Preview */}
+      {/* Step 2 — Chart is now visible in Preview tab; just show confirm row */}
       {step === 2 && preview && (
         <>
           <div className="cm-preview-stats">
@@ -180,45 +202,12 @@ export function ColumnMapper() {
             <span className="cm-stat-dot">·</span>
             <span className="cm-stat"><strong>{preview.rows.length}</strong> values</span>
           </div>
-
-          <div className="cm-preview-table-wrap">
-            <table className="cm-preview-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  {preview.periods.slice(0, 4).map(p => <th key={p}>{p}</th>)}
-                  {preview.periods.length > 4 && <th>…</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.entities.slice(0, 6).map(entity => (
-                  <tr key={entity}>
-                    <td className="cm-preview-name">{entity}</td>
-                    {preview.periods.slice(0, 4).map(p => {
-                      const val = preview.rows.find(r => r.name === entity && r.time === p)?.value;
-                      return (
-                        <td key={p} className="cm-preview-val">
-                          {val !== undefined ? Number(val).toLocaleString() : <span className="cm-no-val">—</span>}
-                        </td>
-                      );
-                    })}
-                    {preview.periods.length > 4 && <td className="cm-no-val">…</td>}
-                  </tr>
-                ))}
-                {preview.entities.length > 6 && (
-                  <tr>
-                    <td colSpan={6} className="cm-preview-more">
-                      +{preview.entities.length - 6} more entities…
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 10px' }}>
+            Switch to the <strong>Preview</strong> tab to see the chart. Come back here to confirm or revise.
+          </p>
           <div className="cm-actions">
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>← Back</button>
-            <button className="btn btn-gradient" onClick={handleLoad}>Load ✓</button>
+            <button className="btn btn-ghost" onClick={handleBack}>← Revise</button>
+            <button className="btn btn-gradient" onClick={handleLoad}>✓ Use this data</button>
           </div>
         </>
       )}

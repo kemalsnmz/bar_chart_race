@@ -895,7 +895,6 @@ export function useChartRenderer() {
           } else {
             nameAlign = 'left';
             nameX = margin.left + labelMargin;
-            nameColor = getTextColor(color);
           }
         } else if (settings.labelPosition === 'inside-right') {
           if (overflowToOutside) {
@@ -904,7 +903,6 @@ export function useChartRenderer() {
             nameX = margin.left + bw + labelMargin;
           } else {
             nameAlign = 'right';
-            nameColor = getTextColor(color);
             if (settings.imagePosition === 'inside' && hasImage) {
               nameX = imgX - gap;
             } else {

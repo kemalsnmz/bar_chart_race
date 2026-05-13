@@ -95,7 +95,14 @@ function parseLineCSV(csv: string): { data: LineDataRow[]; periods: string[] } |
 // ─── Bar Chart Editor ──────────────────────
 function BarChartEditor({ onHome }: { onHome: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
-  const { exportSettings, updateExportSettings } = useChartStore();
+  const { exportSettings, updateExportSettings, csvPreviewReady, setCsvPreviewReady } = useChartStore();
+
+  useEffect(() => {
+    if (csvPreviewReady) {
+      setActiveTab('preview');
+      setCsvPreviewReady(false);
+    }
+  }, [csvPreviewReady]);
 
   return (
     <div className="app-layout">
