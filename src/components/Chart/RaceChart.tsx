@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import { useChartRenderer } from '../../hooks/useChartRenderer';
-import { createBarSpringBundle, stepBarSprings, motionPresets } from '../../engine/motion/spring';
+import { useBarSpringEngine, resolveEngineConfig } from '../../features/spring-bar-engine';
+import type { BarEngineState } from '../../features/spring-bar-engine';
 import type { BarSpringBundle } from '../../engine/motion/spring';
 
 function getCanvasSize(container: HTMLDivElement, ratio: '16:9' | '9:16' | '1:1') {
@@ -30,7 +31,7 @@ export function RaceChart() {
   const rafRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
-  const springRef = useRef<BarSpringBundle>(createBarSpringBundle());
+  const engine = useBarSpringEngine();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
@@ -148,10 +149,9 @@ export function RaceChart() {
       if (idx >= periods.length - 1 && t >= 1) {
         idx = 0;
         t = 0;
-        // Reset spring velocities on loop to avoid flyback artifacts
+        // Reset engine state on loop to avoid flyback artifacts
         if (settings.springEnabled) {
-          for (const s of springRef.current.val.values()) s.vel = 0;
-          for (const s of springRef.current.rank.values()) s.vel = 0;
+          engine.reset();
         }
       }
 
@@ -166,9 +166,16 @@ export function RaceChart() {
           const targetValues = new Map(
             data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value])
           );
-          const cfg = motionPresets[settings.springPreset ?? 'smooth'];
-          stepBarSprings(springRef.current, targetValues, delta / 1000, cfg);
-          activeSpring = springRef.current;
+          const cfg = resolveEngineConfig(settings.springPreset ?? 'cinematic', {
+            valueStiffness:  settings.springCustomValueStiffness,
+            valueDamping:    settings.springCustomValueDamping,
+            valueMass:       settings.springCustomValueMass,
+            rankStiffness:   settings.springCustomRankStiffness,
+            rankDamping:     settings.springCustomRankDamping,
+            rankMass:        settings.springCustomRankMass,
+          });
+          const engineState: BarEngineState = engine.step(targetValues, delta / 1000, cfg);
+          activeSpring = engineState as BarSpringBundle;
         }
 
         drawFrameRef.current(ctx, w, h, idx, t, delta, activeSpring);

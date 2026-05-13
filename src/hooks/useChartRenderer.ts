@@ -208,6 +208,7 @@ export function useChartRenderer() {
     if (periods.length === 0 || data.length === 0) return;
 
     const textColor = getTextColor(settings.backgroundColor || '#ffffff');
+    const labelColor = settings.labelColor || textColor;
 
     // Preload images
     const imageUrlMap = new Map<string, string>();
@@ -742,7 +743,8 @@ export function useChartRenderer() {
           imgH = imgW / (cachedImg.width / cachedImg.height);
         } else {
           imgH = Math.min(barThicknessPx, imgH);
-          // imgW stays as settings.imageWidth — fixed width for all entities
+          // Scale imgW proportionally so the aspect ratio stays constant at any canvas size
+          imgW = settings.imageWidth * (imgH / settings.imageHeight);
         }
       }
 
@@ -822,7 +824,7 @@ export function useChartRenderer() {
           ctx.save();
           ctx.translate(bx + bw / 2, physicalHeight - margin.bottom + (settings.labelMargin ?? 15));
           ctx.rotate(-Math.PI / 2);
-          ctx.fillStyle = settings.labelColor || textColor;
+          ctx.fillStyle = labelColor;
           ctx.font = (settings.labelBold ? '700 ' : '400 ') + nameSize + 'px Inter, sans-serif';
           ctx.textAlign = 'right';
           ctx.textBaseline = 'middle';
@@ -846,29 +848,10 @@ export function useChartRenderer() {
         const labelMargin = settings.labelMargin ?? 15;
         const isInside = settings.labelPosition === 'inside-left' || settings.labelPosition === 'inside-right';
 
-        // Determine effective font size (shrink mode: fill bar width, shrink only if text overflows)
-        let effectiveNameSize = nameSize;
-        if (settings.labelVisible && isInside && settings.labelOverflow === 'shrink') {
-          const imgExtra = settings.imagePosition === 'inside' && hasImage ? imgW + gap * 2 : 0;
-          const available = bw - labelMargin * 2 - imgExtra;
-          // Start from max possible (85% of bar height), shrink until text fits
-          effectiveNameSize = Math.round(bh * 0.85);
-          ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
-          while (effectiveNameSize > 6 && ctx.measureText(d.name).width > available) {
-            effectiveNameSize -= 1;
-            ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
-          }
-        }
-
         if (settings.labelVisible) {
-          ctx.font = (settings.labelBold ? '700 ' : '400 ') + effectiveNameSize + 'px Inter, sans-serif';
+          ctx.font = (settings.labelBold ? '700 ' : '400 ') + nameSize + 'px Inter, sans-serif';
         }
         const nameWidth = settings.labelVisible ? ctx.measureText(d.name).width : 0;
-
-        // For overflow mode: check if label fits inside bar
-        const imgExtra = settings.imagePosition === 'inside' && hasImage ? imgW + gap * 2 : 0;
-        const availableInside = bw - labelMargin * 2 - imgExtra;
-        const overflowToOutside = isInside && settings.labelOverflow === 'overflow' && nameWidth > availableInside;
 
         let imgX = 0;
         let nameX = 0;
@@ -888,40 +871,21 @@ export function useChartRenderer() {
           nameAlign = 'right';
           nameX = (settings.imagePosition === 'left' && hasImage) ? imgX - gap : margin.left - labelMargin;
         } else if (settings.labelPosition === 'inside-left') {
-          if (overflowToOutside) {
-            // overflow: push outside to the right of bar
-            nameAlign = 'left';
-            nameX = margin.left + bw + labelMargin;
-          } else {
-            nameAlign = 'left';
-            nameX = margin.left + labelMargin;
-          }
+          nameAlign = 'left';
+          nameX = margin.left + labelMargin;
         } else if (settings.labelPosition === 'inside-right') {
-          if (overflowToOutside) {
-            // overflow: push outside to the right of bar
-            nameAlign = 'left';
-            nameX = margin.left + bw + labelMargin;
+          nameAlign = 'right';
+          if (settings.imagePosition === 'inside' && hasImage) {
+            nameX = imgX - gap;
           } else {
-            nameAlign = 'right';
-            if (settings.imagePosition === 'inside' && hasImage) {
-              nameX = imgX - gap;
-            } else {
-              nameX = margin.left + bw - labelMargin;
-            }
+            nameX = margin.left + bw - labelMargin;
           }
         } else if (settings.labelPosition === 'right') {
           nameAlign = 'left';
           nameX = (settings.imagePosition === 'right' && hasImage) ? imgX + imgW + gap : margin.left + bw + labelMargin;
         }
 
-        if (overflowToOutside) {
-          // order: bar tip → value → label
-          valueX = margin.left + bw + labelMargin;
-          ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
-          const valStrW = ctx.measureText(formatValue(d.value, vfmt) + ' ' + settings.unit).width;
-          nameX = valueX + valStrW + gap;
-          nameAlign = 'left';
-        } else if (settings.labelPosition === 'right' && settings.imagePosition === 'right' && hasImage) {
+        if (settings.labelPosition === 'right' && settings.imagePosition === 'right' && hasImage) {
           valueX = nameX + nameWidth + gap;
         } else if (settings.labelPosition === 'right') {
           valueX = nameX + nameWidth + gap;
@@ -943,10 +907,17 @@ export function useChartRenderer() {
         }
 
         if (settings.labelVisible) {
-          ctx.fillStyle = settings.labelColor || nameColor;
+          ctx.save();
+          if (isInside) {
+            ctx.beginPath();
+            ctx.rect(margin.left, by, bw, bh);
+            ctx.clip();
+          }
+          ctx.fillStyle = labelColor;
           ctx.textAlign = nameAlign;
           ctx.textBaseline = 'middle';
           ctx.fillText(d.name, nameX, by + bh / 2);
+          ctx.restore();
         }
 
         ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';

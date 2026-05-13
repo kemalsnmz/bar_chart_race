@@ -159,7 +159,13 @@ export interface ChartSettings {
   tickerMarginX: number;
 
   springEnabled: boolean;
-  springPreset: 'smooth' | 'cinematic' | 'energetic';
+  springPreset: 'cinematic' | 'smooth' | 'energetic' | 'snappy' | 'custom';
+  springCustomValueStiffness: number;
+  springCustomValueDamping: number;
+  springCustomValueMass: number;
+  springCustomRankStiffness: number;
+  springCustomRankDamping: number;
+  springCustomRankMass: number;
 }
 
 export interface PlaybackState {
@@ -233,7 +239,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     titleAnimation: 'none',
     barOpacity: 1.0,
     imageHeight: 40,
-    imageWidth: 40,
+    imageWidth: 64,
     imageMarginRight: 1,
     imageSizing: 'fill',
     imageShape: 'rectangle',
@@ -241,7 +247,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelVisible: true,
     labelFontSize: 60,
     labelBold: true,
-    labelColor: '#111111',
+    labelColor: '',
     labelPosition: 'left',
     labelOverflow: 'overflow',
     labelMargin: 5,
@@ -297,7 +303,13 @@ export const useChartStore = create<ChartStore>((set) => ({
     tickerMarginBottom: 0,
     tickerMarginX: 0,
     springEnabled: false,
-    springPreset: 'smooth',
+    springPreset: 'cinematic',
+    springCustomValueStiffness: 140,
+    springCustomValueDamping: 22,
+    springCustomValueMass: 1.0,
+    springCustomRankStiffness: 180,
+    springCustomRankDamping: 28,
+    springCustomRankMass: 1.0,
   },
 
   playback: {
