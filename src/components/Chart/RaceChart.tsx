@@ -1,8 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import { useChartRenderer } from '../../hooks/useChartRenderer';
-import { useBarSpringEngine, resolveEngineConfig } from '../../features/spring-bar-engine';
-import type { BarEngineState } from '../../features/spring-bar-engine';
+import { createBarSpringBundle, stepBarSprings, motionPresets } from '../../engine/motion/spring';
 import type { BarSpringBundle } from '../../engine/motion/spring';
 
 function getCanvasSize(container: HTMLDivElement, ratio: '16:9' | '9:16' | '1:1') {
@@ -31,7 +30,7 @@ export function RaceChart() {
   const rafRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
-  const engine = useBarSpringEngine();
+  const springRef = useRef<BarSpringBundle>(createBarSpringBundle());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
@@ -41,7 +40,7 @@ export function RaceChart() {
   const periodsLen = useChartStore((s) => s.periods.length);
   const settings = useChartStore((s) => s.settings);
   const canvasRatio = useChartStore((s) => s.exportSettings.canvasRatio);
-  // Re-fit canvas when ratio changes
+
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -55,14 +54,13 @@ export function RaceChart() {
       drawFrameRef.current(ctx, w, h, playback.currentPeriodIndex, playback.currentTimeInPeriod);
     }
   }, [canvasRatio]);
+
   const { drawFrame, imgVersion } = useChartRenderer();
   const drawFrameRef = useRef(drawFrame);
   drawFrameRef.current = drawFrame;
 
   useEffect(() => {
-    const onFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
@@ -75,12 +73,10 @@ export function RaceChart() {
     }
   };
 
-  // Resize observer — keeps canvas dimensions correct
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
-
     const observer = new ResizeObserver(() => {
       const ratio = useChartStore.getState().exportSettings.canvasRatio;
       const { w, h } = getCanvasSize(container, ratio);
@@ -92,12 +88,10 @@ export function RaceChart() {
         drawFrameRef.current(ctx, w, h, playback.currentPeriodIndex, playback.currentTimeInPeriod);
       }
     });
-
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
 
-  // Static draw — when paused/seeking, redraws on state changes
   useEffect(() => {
     if (isPlaying) return;
     const canvas = canvasRef.current;
@@ -105,7 +99,6 @@ export function RaceChart() {
     const { w, h } = sizeRef.current;
     if (!w || !h) return;
     const ctx = canvas.getContext('2d')!;
-
     const { periods } = useChartStore.getState();
     if (periods.length > 0) {
       drawFrameRef.current(ctx, w, h, currentPeriodIndex, currentTimeInPeriod);
@@ -120,64 +113,50 @@ export function RaceChart() {
     }
   }, [isPlaying, currentPeriodIndex, currentTimeInPeriod, imgVersion, periodsLen, settings]);
 
-  // Animation loop — canvas drawn directly in rAF, no React render on each frame
   useEffect(() => {
     if (!isPlaying) return;
-
     lastTimeRef.current = undefined;
 
     const loop = (time: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-
       const { data, periods, settings, playback, updatePlayback } = useChartStore.getState();
       if (!playback.isPlaying) return;
 
       if (!lastTimeRef.current) lastTimeRef.current = time;
-      const delta = Math.min(time - lastTimeRef.current, 100); // cap delta to avoid jump on tab switch
+      const delta = Math.min(time - lastTimeRef.current, 100);
       lastTimeRef.current = time;
 
       const msPerPeriod = settings.durationMs / playback.speed;
       let t = playback.currentTimeInPeriod + delta / msPerPeriod;
       let idx = playback.currentPeriodIndex;
 
-      while (t >= 1 && idx < periods.length - 1) {
-        t -= 1;
-        idx += 1;
-      }
+      while (t >= 1 && idx < periods.length - 1) { t -= 1; idx += 1; }
 
       if (idx >= periods.length - 1 && t >= 1) {
-        idx = 0;
-        t = 0;
-        // Reset engine state on loop to avoid flyback artifacts
+        idx = 0; t = 0;
         if (settings.springEnabled) {
-          engine.reset();
+          springRef.current.val.forEach((s) => { s.vel = 0; });
+          springRef.current.rank.forEach((s) => { s.vel = 0; });
         }
       }
 
       const { w, h } = sizeRef.current;
       if (w && h) {
         const ctx = canvas.getContext('2d')!;
-
         let activeSpring: BarSpringBundle | undefined;
         if (settings.springEnabled) {
-          // Build target values from the current period
           const currentPeriod = periods[idx];
           const targetValues = new Map(
             data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value])
           );
-          const cfg = resolveEngineConfig(settings.springPreset ?? 'cinematic', {
-            valueStiffness:  settings.springCustomValueStiffness,
-            valueDamping:    settings.springCustomValueDamping,
-            valueMass:       settings.springCustomValueMass,
-            rankStiffness:   settings.springCustomRankStiffness,
-            rankDamping:     settings.springCustomRankDamping,
-            rankMass:        settings.springCustomRankMass,
-          });
-          const engineState: BarEngineState = engine.step(targetValues, delta / 1000, cfg);
-          activeSpring = engineState as BarSpringBundle;
+          const preset = (settings.springPreset as keyof typeof motionPresets) in motionPresets
+            ? (settings.springPreset as keyof typeof motionPresets)
+            : 'cinematic';
+          const cfg = motionPresets[preset];
+          stepBarSprings(springRef.current, targetValues, delta / 1000, cfg);
+          activeSpring = springRef.current;
         }
-
         drawFrameRef.current(ctx, w, h, idx, t, delta, activeSpring);
       }
 
@@ -186,9 +165,7 @@ export function RaceChart() {
     };
 
     rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [isPlaying]);
 
   return (
@@ -200,25 +177,9 @@ export function RaceChart() {
           <span>REC</span>
         </div>
       )}
-      <button 
+      <button
         onClick={toggleFullscreen}
-        style={{
-          position: 'absolute',
-          bottom: 16,
-          right: 16,
-          background: 'rgba(0,0,0,0.3)',
-          color: 'white',
-          border: 'none',
-          borderRadius: 6,
-          padding: '8px',
-          cursor: 'pointer',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backdropFilter: 'blur(4px)',
-          transition: 'background 0.2s'
-        }}
+        style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(0,0,0,0.3)', color: 'white', border: 'none', borderRadius: 6, padding: '8px', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', transition: 'background 0.2s' }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
         onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.3)'}
         title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}

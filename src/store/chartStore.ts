@@ -159,13 +159,7 @@ export interface ChartSettings {
   tickerMarginX: number;
 
   springEnabled: boolean;
-  springPreset: 'cinematic' | 'smooth' | 'energetic' | 'snappy' | 'custom';
-  springCustomValueStiffness: number;
-  springCustomValueDamping: number;
-  springCustomValueMass: number;
-  springCustomRankStiffness: number;
-  springCustomRankDamping: number;
-  springCustomRankMass: number;
+  springPreset: 'smooth' | 'cinematic' | 'energetic';
 }
 
 export interface PlaybackState {
@@ -304,12 +298,6 @@ export const useChartStore = create<ChartStore>((set) => ({
     tickerMarginX: 0,
     springEnabled: false,
     springPreset: 'cinematic',
-    springCustomValueStiffness: 140,
-    springCustomValueDamping: 22,
-    springCustomValueMass: 1.0,
-    springCustomRankStiffness: 180,
-    springCustomRankDamping: 28,
-    springCustomRankMass: 1.0,
   },
 
   playback: {
