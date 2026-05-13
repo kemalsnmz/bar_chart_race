@@ -99,7 +99,7 @@ function BarChartEditor({ onHome }: { onHome: () => void }) {
 
   useEffect(() => {
     if (csvPreviewReady) {
-      setActiveTab('preview');
+      setActiveTab('data');
       setCsvPreviewReady(false);
     }
   }, [csvPreviewReady]);

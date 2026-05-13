@@ -80,10 +80,9 @@ export function ColumnMapper() {
       }
       const entities = [...new Set(data.map(d => d.name))];
       setPreview({ entities, periods, rows: data });
-      // Load data into store and signal parent to switch to preview tab
       setData(data, periods);
       setCsvPreviewReady(true);
-      setStep(2);
+      setPendingCSV(null);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -92,7 +91,6 @@ export function ColumnMapper() {
   };
 
   const handleLoad = () => {
-    setCsvPreviewReady(false);
     setPendingCSV(null);
   };
 
@@ -192,7 +190,7 @@ export function ColumnMapper() {
         </>
       )}
 
-      {/* Step 2 — Chart is now visible in Preview tab; just show confirm row */}
+      {/* Step 2 — Preview table + confirm */}
       {step === 2 && preview && (
         <>
           <div className="cm-preview-stats">
@@ -202,9 +200,35 @@ export function ColumnMapper() {
             <span className="cm-stat-dot">·</span>
             <span className="cm-stat"><strong>{preview.rows.length}</strong> values</span>
           </div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 10px' }}>
-            Switch to the <strong>Preview</strong> tab to see the chart. Come back here to confirm or revise.
-          </p>
+          <div className="cm-preview-table-wrap">
+            <table className="cm-preview-table">
+              <thead>
+                <tr>
+                  <th><span className="cm-col-badge" style={{ background: FIELD_META.name.color }}>{FIELD_META.name.icon} Name</span></th>
+                  <th><span className="cm-col-badge" style={{ background: FIELD_META.time.color }}>{FIELD_META.time.icon} Time</span></th>
+                  <th><span className="cm-col-badge" style={{ background: FIELD_META.value.color }}>{FIELD_META.value.icon} Value</span></th>
+                  {preview.rows.some(r => r.category) && <th><span className="cm-col-badge" style={{ background: '#ec4899' }}>🏷 Category</span></th>}
+                  {preview.rows.some(r => r.imageUrl) && <th><span className="cm-col-badge" style={{ background: FIELD_META.image.color }}>{FIELD_META.image.icon} Image</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.slice(0, 80).map((row, i) => (
+                  <tr key={i}>
+                    <td style={{ fontWeight: 600, background: FIELD_META.name.color + '18' }}>{row.name}</td>
+                    <td style={{ background: FIELD_META.time.color + '18' }}>{row.time}</td>
+                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', background: FIELD_META.value.color + '18' }}>{row.value}</td>
+                    {preview.rows.some(r => r.category) && <td style={{ background: '#ec489918' }}>{row.category}</td>}
+                    {preview.rows.some(r => r.imageUrl) && <td style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 10, background: FIELD_META.image.color + '18' }}>{row.imageUrl}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {preview.rows.length > 80 && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '4px 0' }}>
+                +{preview.rows.length - 80} more rows…
+              </p>
+            )}
+          </div>
           <div className="cm-actions">
             <button className="btn btn-ghost" onClick={handleBack}>← Revise</button>
             <button className="btn btn-gradient" onClick={handleLoad}>✓ Use this data</button>
