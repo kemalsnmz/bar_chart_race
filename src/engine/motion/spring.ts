@@ -55,30 +55,34 @@ export function stepBarSprings(
   targetValues: Map<string, number>,
   dtSec: number,
   cfg: SpringConfig,
+  rankCfg?: SpringConfig,
 ): string[] {
   // Initialize missing entities at their target values (no pop-in)
   for (const [name, target] of targetValues) {
-    if (!bundle.val.has(name))  bundle.val.set(name,  createSpring(target));
+    if (!bundle.val.has(name)) bundle.val.set(name, createSpring(target));
     if (!bundle.rank.has(name)) bundle.rank.set(name, createSpring(0));
   }
 
-  // Step value springs
+  // Step value springs (bar width)
   for (const [name, state] of bundle.val) {
     const target = targetValues.get(name) ?? 0;
     bundle.val.set(name, stepSpring(state, target, dtSec, cfg));
   }
 
-  // Derive integer target ranks from current spring values
+  // Derive integer target ranks from current spring values (bar vertical order)
   const sorted = [...bundle.val.entries()]
     .sort((a, b) => b[1].pos - a[1].pos)
     .map(([name]) => name);
 
-  const rankTargets = new Map(sorted.map((name, i) => [name, i]));
+  const rankTargets = new Map(sorted.map((name, i) => [name, i]));  
+  // Soft rank spring config (very smooth)
+  const rankConfig: SpringConfig = rankCfg ?? { stiffness: cfg.stiffness * 0.02, damping: cfg.damping * 3.0, mass: cfg.mass };
+  
 
-  // Step rank springs toward integer rank targets
+  // Step rank springs toward their integer rank targets
   for (const [name, state] of bundle.rank) {
     const target = rankTargets.get(name) ?? state.pos;
-    bundle.rank.set(name, stepSpring(state, target, dtSec, cfg));
+    bundle.rank.set(name, stepSpring(state, target, dtSec, rankConfig));
   }
 
   return sorted;

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import { useChartRenderer } from '../../hooks/useChartRenderer';
 import { createBarSpringBundle, stepBarSprings, motionPresets } from '../../engine/motion/spring';
+import type { SpringConfig } from '../../engine/motion/spring';
 import type { BarSpringBundle } from '../../engine/motion/spring';
 
 function getCanvasSize(container: HTMLDivElement, ratio: '16:9' | '9:16' | '1:1') {
@@ -153,8 +154,13 @@ export function RaceChart() {
           const preset = (settings.springPreset as keyof typeof motionPresets) in motionPresets
             ? (settings.springPreset as keyof typeof motionPresets)
             : 'cinematic';
-          const cfg = motionPresets[preset];
-          stepBarSprings(springRef.current, targetValues, delta / 1000, cfg);
+          const baseCfg = motionPresets[preset];
+          // Ultra-soft value springs (bar width) for very gentle transitions
+          const valueCfg = { ...baseCfg, stiffness: baseCfg.stiffness * 0.05, damping: baseCfg.damping * 3.0 };
+          // Ultra-soft rank springs (vertical order) to delay rank changes further
+          const rankCfg: SpringConfig = { stiffness: baseCfg.stiffness * 0.002, damping: baseCfg.damping * 5.0, mass: baseCfg.mass };
+          stepBarSprings(springRef.current, targetValues, delta / 1000, valueCfg, rankCfg);
+          activeSpring = springRef.current;
           activeSpring = springRef.current;
         }
         drawFrameRef.current(ctx, w, h, idx, t, delta, activeSpring);

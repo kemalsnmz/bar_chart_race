@@ -120,6 +120,7 @@ function applyEasing(t: number, easing: string): number {
   switch (easing) {
     case 'ease-out':    return 1 - Math.pow(1 - t, 3);
     case 'ease-in-out': return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    case 'sine-in-out': return 0.5 * (1 - Math.cos(Math.PI * t));
     case 'spring': {
       const c1 = 1.70158, c3 = c1 + 1;
       return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
@@ -702,19 +703,31 @@ export function useChartRenderer() {
       }
     }
 
-    // Bars
+
+    // ── Rank animation ────────────────────────────────────────────────────────
+    const riseProgressMap = new Map<string, number>();
+    const rankEt = Math.min(1, et * (settings.rankSwapSpeed ?? 1.0));
+
+    topData.forEach(d => {
+      const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
+      const currRank = currRankMap.get(d.name) ?? settings.maxBars;
+      if (currRank < prevRank) {
+        riseProgressMap.set(d.name, rankEt);
+      }
+    });
+
+    // ── Draw ─────────────────────────────────────────────────────────────────
     topData.forEach((d) => {
       const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
       const currRank = currRankMap.get(d.name) ?? settings.maxBars;
-
-      // Rank: spring mode uses spring rank position; otherwise interpolate
       let rank: number;
       if (springStates) {
         rank = springStates.rank.get(d.name)?.pos ?? interpolatedData.findIndex(x => x.name === d.name);
       } else {
-        const rankEt = Math.min(1, et * (settings.rankSwapSpeed ?? 1.0));
         rank = interpolate(prevRank, currRank, rankEt);
       }
+      const riseProgress = riseProgressMap.get(d.name) ?? 0;
+
       if (rank >= settings.maxBars) return;
 
       // Image spin: one full 360° when rising up in rank (if enabled)
@@ -760,6 +773,16 @@ export function useChartRenderer() {
         bw = Math.max(hasImage ? imgW : 0, Math.max(0, xScale(d.value)));
         bx = margin.left;
         bh = barThicknessPx;
+      }
+
+      // Uniform scale anchored to left edge: bar grows right while rising
+      const popScale = 1 + 0.22 * Math.sin(Math.PI * riseProgress);
+      ctx.save();
+      if (popScale > 1.001 && !isVertical) {
+        const cy = by + bh / 2;
+        ctx.translate(bx, cy);
+        ctx.scale(popScale, popScale);
+        ctx.translate(-bx, -cy);
       }
 
       ctx.globalAlpha = settings.barOpacity ?? 1;
@@ -843,6 +866,8 @@ export function useChartRenderer() {
         ctx.fillText(formatValue(d.value, vfmt) + ' ' + settings.unit, 0, 0);
         ctx.restore();
 
+        ctx.restore(); // pop scale (vertical — no scale applied but save was opened)
+
       } else {
         // Horizontal layout image & labels
         const labelMargin = settings.labelMargin ?? 15;
@@ -906,6 +931,15 @@ export function useChartRenderer() {
           ctx.restore();
         }
 
+        ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
+        ctx.fillStyle = settings.valueColor || textColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(formatValue(d.value, vfmt) + ' ' + settings.unit, valueX, by + bh / 2);
+
+        // Restore scale transform before drawing label (name stays fixed on left)
+        ctx.restore();
+
         if (settings.labelVisible) {
           ctx.save();
           if (isInside) {
@@ -913,17 +947,13 @@ export function useChartRenderer() {
             ctx.rect(margin.left, by, bw, bh);
             ctx.clip();
           }
+          ctx.font = (settings.labelBold ? '700 ' : '400 ') + nameSize + 'px Inter, sans-serif';
           ctx.fillStyle = labelColor;
           ctx.textAlign = nameAlign;
           ctx.textBaseline = 'middle';
           ctx.fillText(d.name, nameX, by + bh / 2);
           ctx.restore();
         }
-
-        ctx.font = '700 ' + valueSize + 'px Inter, sans-serif';
-        ctx.fillStyle = settings.valueColor || textColor;
-        ctx.textAlign = 'left';
-        ctx.fillText(formatValue(d.value, vfmt) + ' ' + settings.unit, valueX, by + bh / 2);
       }
     });
 
