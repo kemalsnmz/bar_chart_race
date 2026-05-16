@@ -708,16 +708,33 @@ export function useChartRenderer() {
     const riseProgressMap = new Map<string, number>();
     const rankEt = Math.min(1, et * (settings.rankSwapSpeed ?? 1.0));
 
-    topData.forEach(d => {
-      const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
-      const currRank = currRankMap.get(d.name) ?? settings.maxBars;
-      if (currRank < prevRank) {
-        riseProgressMap.set(d.name, rankEt);
+    // Sort rising bars by destination rank so they rise in order (rank 0 first)
+    const risingEntries = topData
+      .map(d => ({
+        name: d.name,
+        prevRank: prevRankMap.get(d.name) ?? settings.maxBars,
+        currRank: currRankMap.get(d.name) ?? settings.maxBars,
+      }))
+      .filter(e => e.currRank < e.prevRank)
+      .sort((a, b) => a.currRank - b.currRank);
+
+    const risingCount = risingEntries.length;
+    risingEntries.forEach((e, i) => {
+      // Stagger: bar going to rank 0 starts immediately, each subsequent bar delayed
+      const delay = risingCount > 1 ? (i / risingCount) * 1.5 : 0;
+      const progress = Math.min(1, Math.max(0, (rankEt - delay) / Math.max(0.01, 1 - delay)));
+      if (progress > 0) {
+        riseProgressMap.set(e.name, progress);
       }
     });
 
     // ── Draw ─────────────────────────────────────────────────────────────────
-    topData.forEach((d) => {
+    // Rising bars drawn last so they render on top of falling bars
+    const drawOrder = [
+      ...topData.filter(d => !riseProgressMap.has(d.name)),
+      ...topData.filter(d => riseProgressMap.has(d.name)),
+    ];
+    drawOrder.forEach((d) => {
       const prevRank = prevRankMap.get(d.name) ?? settings.maxBars;
       const currRank = currRankMap.get(d.name) ?? settings.maxBars;
       let rank: number;
