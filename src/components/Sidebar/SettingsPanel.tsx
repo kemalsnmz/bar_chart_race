@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useChartStore } from '../../store/chartStore';
 import type { ColorMode, TextAlign, ImageSizing, ImageShape, BarEndShape, TickerEntry, VideoEntry, BackgroundEntry } from '../../store/chartStore';
+import { AudioPanel } from '../Audio/AudioPanel';
 import { palettes } from '../../utils/colorPalettes';
 import type { PaletteName } from '../../utils/colorPalettes';
 import { ColorPicker } from './ColorPicker';
@@ -1034,6 +1035,17 @@ export function SettingsPanel() {
           </div>
         </div>
 
+        <div className="fl-field">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Excitement</label>
+            <span className="fl-val-badge">{Math.round((settings.noiseStrength ?? 0) * 100)}%</span>
+          </div>
+          <input type="range" className="fl-slider" min={0} max={0.25} step={0.01}
+            value={settings.noiseStrength ?? 0}
+            onChange={e => updateSettings({ noiseStrength: parseFloat(e.target.value) })} />
+          <div className="fl-slider-ends"><span>Off</span><span>Wild</span></div>
+        </div>
+
         <div className="fl-sub-heading">
           <span>Spring Physics</span>
           <div className="fl-sub-line" />
@@ -1262,6 +1274,11 @@ export function SettingsPanel() {
           >+</button>
         </div>
 
+      </Section>
+
+      {/* ════ Audio ════ */}
+      <Section title="Audio" defaultOpen={false}>
+        <AudioPanel />
       </Section>
 
       {/* ════ News Ticker ════ */}

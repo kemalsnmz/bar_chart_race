@@ -32,9 +32,34 @@ export function RaceChart() {
   const lastTimeRef = useRef<number | undefined>(undefined);
   const sizeRef = useRef({ w: 0, h: 0 });
   const springRef = useRef<BarSpringBundle>(createBarSpringBundle());
+  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const isPlaying = useChartStore((s) => s.playback.isPlaying);
+  const audioEntries = useChartStore((s) => s.audioEntries);
+
+  // Sync HTMLAudioElement instances with audioEntries
+  useEffect(() => {
+    const map = audioRefs.current;
+    for (const [id, audio] of map) {
+      if (!audioEntries.find(e => e.id === id)) {
+        audio.pause();
+        map.delete(id);
+      }
+    }
+    for (const entry of audioEntries) {
+      if (!map.has(entry.id)) {
+        map.set(entry.id, new Audio(entry.objectUrl));
+      }
+    }
+  }, [audioEntries]);
+
+  // Pause all audio when playback stops
+  useEffect(() => {
+    if (!isPlaying) {
+      audioRefs.current.forEach(a => a.pause());
+    }
+  }, [isPlaying]);
   const currentPeriodIndex = useChartStore((s) => s.playback.currentPeriodIndex);
   const currentTimeInPeriod = useChartStore((s) => s.playback.currentTimeInPeriod);
   const isExporting = useChartStore((s) => s.isExporting);
@@ -128,13 +153,14 @@ export function RaceChart() {
       const delta = Math.min(time - lastTimeRef.current, 100);
       lastTimeRef.current = time;
 
+      const maxIdx = periods.length - 1;
       const msPerPeriod = settings.durationMs / playback.speed;
       let t = playback.currentTimeInPeriod + delta / msPerPeriod;
       let idx = playback.currentPeriodIndex;
 
-      while (t >= 1 && idx < periods.length - 1) { t -= 1; idx += 1; }
+      while (t >= 1 && idx < maxIdx) { t -= 1; idx += 1; }
 
-      if (idx >= periods.length - 1 && t >= 1) {
+      if (idx >= maxIdx && t >= 1) {
         idx = 0; t = 0;
         if (settings.springEnabled) {
           springRef.current.val.forEach((s) => { s.vel = 0; });
@@ -164,6 +190,30 @@ export function RaceChart() {
           activeSpring = springRef.current;
         }
         drawFrameRef.current(ctx, w, h, idx, t, delta, activeSpring);
+      }
+
+      // ── Audio sync ───────────────────────────────────────────────────────
+      const { audioEntries: entries, periods: allPeriods } = useChartStore.getState();
+      for (const entry of entries) {
+        const audio = audioRefs.current.get(entry.id);
+        if (!audio) continue;
+        const fromIdx = allPeriods.indexOf(entry.from);
+        const toIdx = allPeriods.indexOf(entry.to);
+        if (idx >= fromIdx && idx <= toIdx && fromIdx >= 0) {
+          const msPerP = settings.durationMs / playback.speed;
+          const audioTime = ((idx - fromIdx) + t) * msPerP / 1000;
+          const totalSec = (toIdx - fromIdx + 1) * msPerP / 1000;
+          let vol = entry.volume;
+          if (entry.fadeIn > 0 && audioTime < entry.fadeIn) vol *= audioTime / entry.fadeIn;
+          if (entry.fadeOut > 0 && audioTime > totalSec - entry.fadeOut) vol *= (totalSec - audioTime) / entry.fadeOut;
+          audio.volume = Math.max(0, Math.min(1, vol));
+          if (audio.paused) {
+            audio.currentTime = Math.min(audioTime, audio.duration || audioTime);
+            audio.play().catch(() => {});
+          }
+        } else {
+          if (!audio.paused) audio.pause();
+        }
       }
 
       updatePlayback({ currentPeriodIndex: idx, currentTimeInPeriod: t });

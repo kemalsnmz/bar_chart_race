@@ -2,7 +2,78 @@ import { useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 import { useChartStore } from '../store/chartStore';
+import type { AudioEntry } from '../store/chartStore';
 import { useChartRenderer } from './useChartRenderer';
+
+function audioBufferToWav(buffer: AudioBuffer): Uint8Array {
+  const numCh = buffer.numberOfChannels;
+  const sr = buffer.sampleRate;
+  const len = buffer.length;
+  const byteLen = len * numCh * 2;
+  const out = new ArrayBuffer(44 + byteLen);
+  const view = new DataView(out);
+  const write = (off: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+  write(0, 'RIFF'); view.setUint32(4, 36 + byteLen, true);
+  write(8, 'WAVE'); write(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+  view.setUint32(24, sr, true); view.setUint32(28, sr * numCh * 2, true);
+  view.setUint16(32, numCh * 2, true); view.setUint16(34, 16, true);
+  write(36, 'data'); view.setUint32(40, byteLen, true);
+  const channels = Array.from({ length: numCh }, (_, i) => buffer.getChannelData(i));
+  let off = 44;
+  for (let i = 0; i < len; i++) {
+    for (let c = 0; c < numCh; c++) {
+      const s = Math.max(-1, Math.min(1, channels[c][i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      off += 2;
+    }
+  }
+  return new Uint8Array(out);
+}
+
+async function renderAudioOffline(
+  audioEntries: AudioEntry[],
+  periods: string[],
+  durationMs: number,
+): Promise<Uint8Array | null> {
+  if (audioEntries.length === 0) return null;
+  const totalSec = (periods.length - 1) * (durationMs / 1000);
+  if (totalSec <= 0) return null;
+  const sr = 44100;
+  const ctx = new OfflineAudioContext(2, Math.ceil(totalSec * sr), sr);
+
+  for (const entry of audioEntries) {
+    const fromIdx = periods.indexOf(entry.from);
+    const toIdx = periods.indexOf(entry.to);
+    if (fromIdx < 0 || toIdx < 0 || fromIdx > toIdx) continue;
+    const startSec = fromIdx * (durationMs / 1000);
+    const endSec = Math.min((toIdx + 1) * (durationMs / 1000), totalSec);
+    try {
+      const resp = await fetch(entry.objectUrl);
+      const buf = await ctx.decodeAudioData(await resp.arrayBuffer());
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, startSec);
+      if (entry.fadeIn > 0) {
+        gain.gain.linearRampToValueAtTime(entry.volume, startSec + entry.fadeIn);
+      } else {
+        gain.gain.setValueAtTime(entry.volume, startSec);
+      }
+      if (entry.fadeOut > 0 && endSec - entry.fadeOut > startSec) {
+        gain.gain.setValueAtTime(entry.volume, endSec - entry.fadeOut);
+        gain.gain.linearRampToValueAtTime(0.0001, endSec);
+      }
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(startSec);
+      src.stop(endSec);
+    } catch { /* skip undecodable entries */ }
+  }
+
+  const rendered = await ctx.startRendering();
+  return audioBufferToWav(rendered);
+}
 
 export function useVideoExporter() {
   const { periods, settings, exportSettings, setExporting } = useChartStore();
@@ -10,6 +81,7 @@ export function useVideoExporter() {
 
   const exportVideo = useCallback(async () => {
     if (periods.length === 0) return;
+    const { audioEntries } = useChartStore.getState();
 
     setExporting(true, 0);
 
@@ -46,44 +118,81 @@ export function useVideoExporter() {
     const deltaMs         = 1000 / fps;
     let   frameIdx        = 0;
 
-    const captureFrame = (): Promise<Uint8Array> =>
-      new Promise(resolve =>
-        canvas.toBlob(async blob => {
-          resolve(new Uint8Array(await blob!.arrayBuffer()));
-        }, 'image/jpeg', 0.92)
-      );
+    // Synchronous JPEG capture — eliminates one async round-trip per frame
+    const captureFrame = (): Uint8Array => {
+      const dataURL = canvas.toDataURL('image/jpeg', 0.94);
+      const base64  = dataURL.slice(dataURL.indexOf(',') + 1);
+      const bin     = atob(base64);
+      const bytes   = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    };
+
+    // Only seek clip videos when clips are actually present
+    const hasClipVideos = (settings.videoEntries ?? []).some(
+      e => (e.type === 'image' ? !!e.imageUrl : !!e.objectUrl) && e.from && e.to
+    );
 
     const pad = (n: number) => String(n).padStart(6, '0');
 
     // Render every frame and write to FFmpeg virtual FS
     for (let p = 0; p < periods.length - 1; p++) {
       for (let f = 0; f < framesPerPeriod; f++) {
-        await seekClipVideos(p, f / framesPerPeriod);
-        drawFrame(ctx, width, height, p, f / framesPerPeriod, deltaMs);
-        await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
+        const tInPeriod = f / framesPerPeriod;
+        if (hasClipVideos) await seekClipVideos(p, tInPeriod);
+        drawFrame(ctx, width, height, p, tInPeriod, deltaMs);
+        await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, captureFrame());
         frameIdx++;
         setExporting(true, 0.05 + (frameIdx / totalFrames) * 0.73);
+        // Yield to browser every 15 frames so progress bar stays responsive
+        if (frameIdx % 15 === 0) await new Promise(r => setTimeout(r, 0));
       }
     }
 
     // Final frame
-    await seekClipVideos(periods.length - 1, 1);
+    if (hasClipVideos) await seekClipVideos(periods.length - 1, 1);
     drawFrame(ctx, width, height, periods.length - 1, 1, deltaMs);
-    await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, await captureFrame());
+    await ffmpeg.writeFile(`f${pad(frameIdx)}.jpg`, captureFrame());
     setExporting(true, 0.78);
 
-    // Encode: -framerate input, -r output both locked to fps → constant framerate
-    await ffmpeg.exec([
+    // Render audio offline and write to FFmpeg FS
+    const audioWav = await renderAudioOffline(audioEntries, periods, settings.durationMs);
+    const hasAudio = audioWav !== null;
+    if (hasAudio) await ffmpeg.writeFile('audio.wav', audioWav!);
+
+    // Encode video (+ optional audio)
+    const crf = exportSettings.resolution === '4k' ? '20' : '16';
+    const baseVideoArgs = [
       '-framerate', String(fps),
       '-i',         'f%06d.jpg',
-      '-c:v',       'libx264',
-      '-preset',    'fast',
-      '-crf',       '18',
-      '-pix_fmt',   'yuv420p',
-      '-r',         String(fps),   // enforce CFR in output
-      '-movflags',  '+faststart',  // web-optimised: moov atom at front
-      'output.mp4',
-    ]);
+    ];
+    const encodeArgs = [
+      '-c:v',     'libx264',
+      '-preset',  'veryfast',
+      '-crf',     crf,
+      '-tune',    'animation',
+      '-pix_fmt', 'yuv420p',
+      '-r',       String(fps),
+      '-movflags', '+faststart',
+    ];
+
+    if (hasAudio) {
+      await ffmpeg.exec([
+        ...baseVideoArgs,
+        '-i', 'audio.wav',
+        ...encodeArgs,
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-shortest',
+        'output.mp4',
+      ]);
+    } else {
+      await ffmpeg.exec([
+        ...baseVideoArgs,
+        ...encodeArgs,
+        'output.mp4',
+      ]);
+    }
 
     const fileData  = await ffmpeg.readFile('output.mp4');
     const finalBlob = new Blob(

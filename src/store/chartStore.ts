@@ -60,6 +60,17 @@ export interface TickerEntry {
   marginY?: number;
 }
 
+export interface AudioEntry {
+  id: string;
+  fileName: string;
+  objectUrl: string;
+  from: string;
+  to: string;
+  volume: number;
+  fadeIn: number;
+  fadeOut: number;
+}
+
 export interface VideoEntry {
   type?: 'video' | 'image';
   objectUrl: string;
@@ -83,6 +94,7 @@ export interface ChartSettings {
   minBarLength: number;
   durationMs: number;
   easing: 'linear' | 'ease-out' | 'ease-in-out' | 'spring' | 'bounce' | 'elastic';
+  noiseStrength: number;
   unit: string;
   palette: PaletteName;
   backgroundColor: string;
@@ -184,6 +196,9 @@ interface ChartStore {
   playback: PlaybackState;
   exportSettings: ExportSettings;
 
+  audioEntries: AudioEntry[];
+  setAudioEntries: (entries: AudioEntry[]) => void;
+
   isExporting: boolean;
   exportProgress: number;
 
@@ -221,7 +236,8 @@ export const useChartStore = create<ChartStore>((set) => ({
     barLengthScale: 100,
     minBarLength: 80,
     durationMs: 2000,
-    easing: 'linear',
+    easing: 'ease-out',
+    noiseStrength: 0,
     unit: '',
     palette: 'vivid',
     backgroundColor: '#171F2F',
@@ -242,12 +258,12 @@ export const useChartStore = create<ChartStore>((set) => ({
     labelFontSize: 60,
     labelBold: true,
     labelColor: '',
-    labelPosition: 'left',
+    labelPosition: 'inside-left',
     labelOverflow: 'overflow',
     labelMargin: 5,
     valueFontSize: 55,
     valueColor: '',
-    valueFormat: 'short',
+    valueFormat: 'full',
     barEndShape: 'flat',
     imagePosition: 'right',
     barThickness: 80,
@@ -312,6 +328,9 @@ export const useChartStore = create<ChartStore>((set) => ({
     fps: 30,
     canvasRatio: '16:9',
   },
+
+  audioEntries: [],
+  setAudioEntries: (entries) => set(() => ({ audioEntries: entries })),
 
   isExporting: false,
   exportProgress: 0,

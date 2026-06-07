@@ -13,8 +13,10 @@ export function PlaybackBar() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const totalSeconds = (periods.length * settings.durationMs) / 1000;
-  const currentSeconds = ((playback.currentPeriodIndex + playback.currentTimeInPeriod) * settings.durationMs) / 1000;
+  const maxIdx = periods.length - 1;
+  const origIdx = Math.min(playback.currentPeriodIndex, periods.length - 1);
+  const totalSeconds = (periods.length - 1) * settings.durationMs / 1000;
+  const currentSeconds = (playback.currentPeriodIndex + playback.currentTimeInPeriod) * settings.durationMs / 1000;
 
   return (
     <div className="playback-bar">
@@ -46,13 +48,13 @@ export function PlaybackBar() {
         <input
           type="range"
           min="0"
-          max={periods.length - 1}
+          max={maxIdx}
           value={playback.currentPeriodIndex}
           onChange={(e) => seek(Number(e.target.value))}
         />
         <div className="timeline-labels">
           <span>{periods[0]}</span>
-          <span className="current">{periods[playback.currentPeriodIndex]}</span>
+          <span className="current">{periods[origIdx]}</span>
           <span>{periods[periods.length - 1]}</span>
         </div>
       </div>

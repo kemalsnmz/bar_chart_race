@@ -116,6 +116,27 @@ function bounceOut(t: number): number {
   return n1 * (t -= 2.625 / d1) * t + 0.984375;
 }
 
+function barDrift(t: number, name: string, periodIndex: number): number {
+  let h = periodIndex * 7919;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
+  }
+  // Per-bar personality from seeded hash
+  const phase1 = (h % 1000) / 1000 * Math.PI * 2;
+  const phase2 = ((h >> 4) % 1000) / 1000 * Math.PI * 2;
+  const phase3 = ((h >> 8) % 1000) / 1000 * Math.PI * 2;
+  const freq1 = 2 + (h % 3);         // 2–4 cycles
+  const freq2 = 4 + ((h >> 2) % 3);  // 4–6 cycles (mid detail)
+  const aggr = 0.5 + ((h >> 6) % 100) / 100 * 0.5; // 0.5–1.0 aggressiveness
+  // Envelope: zero at both boundaries
+  const env = Math.sin(Math.PI * t);
+  // Three overlapping waves for organic feel
+  const wave = Math.sin(freq1 * Math.PI * t + phase1)
+             + Math.sin(freq2 * Math.PI * t + phase2) * 0.45
+             + Math.sin(9 * Math.PI * t + phase3) * 0.2;
+  return env * (wave / 1.65) * aggr;
+}
+
 function applyEasing(t: number, easing: string): number {
   switch (easing) {
     case 'ease-out':    return 1 - Math.pow(1 - t, 3);
@@ -238,8 +259,8 @@ export function useChartRenderer() {
       colorMap = buildBarColors(allNames, settings.palette);
     }
 
-    const currentPeriod = periods[periodIndex];
-    const prevPeriod = periodIndex > 0 ? periods[periodIndex - 1] : currentPeriod;
+    const prevPeriod = periods[periodIndex];
+    const currentPeriod = periods[Math.min(periods.length - 1, periodIndex + 1)];
 
     const et = applyEasing(t, settings.easing ?? 'ease-out');
 
@@ -249,15 +270,43 @@ export function useChartRenderer() {
 
     const interpolatedData: { name: string; value: number }[] = [];
 
+    const noiseStrength = settings.noiseStrength ?? 0;
+    const noiseScale = noiseStrength > 0
+      ? Math.max(...Array.from(currDataMap.values()), 1) * noiseStrength
+      : 0;
+
     if (springStates) {
-      // Spring mode: use spring positions directly
       for (const [name, state] of springStates.val) {
         interpolatedData.push({ name, value: state.pos });
       }
     } else {
+      // Compute raw interpolated values first (no noise) for proximity detection
+      const rawValues = new Map<string, number>();
       for (const name of allEntities) {
-        const val = interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, et);
-        interpolatedData.push({ name, value: val });
+        rawValues.set(name, interpolate(prevDataMap.get(name) ?? 0, currDataMap.get(name) ?? 0, et));
+      }
+
+      // Proximity boost: bars close in value get amplified noise so they swap more often
+      const proximityBoostMap = new Map<string, number>();
+      if (noiseScale > 0) {
+        const sortedRaw = [...rawValues.entries()].sort((a, b) => b[1] - a[1]);
+        const maxRawVal = Math.max(...rawValues.values(), 1);
+        const proximityThreshold = maxRawVal * 0.2; // within 20% of max = rivals
+        for (let i = 0; i < sortedRaw.length; i++) {
+          const [name, val] = sortedRaw[i];
+          let minDist = Infinity;
+          if (i > 0) minDist = Math.min(minDist, Math.abs(val - sortedRaw[i - 1][1]));
+          if (i < sortedRaw.length - 1) minDist = Math.min(minDist, Math.abs(val - sortedRaw[i + 1][1]));
+          const proximity = Math.max(0, 1 - minDist / proximityThreshold);
+          proximityBoostMap.set(name, 1 + proximity * 2.5); // up to 3.5x for neck-and-neck bars
+        }
+      }
+
+      for (const name of allEntities) {
+        const val = rawValues.get(name) ?? 0;
+        const proximityMult = proximityBoostMap.get(name) ?? 1;
+        const noise = noiseScale > 0 ? barDrift(t, name, periodIndex) * noiseScale * proximityMult : 0;
+        interpolatedData.push({ name, value: Math.max(0, val + noise) });
       }
     }
 
@@ -709,11 +758,15 @@ export function useChartRenderer() {
     const rankEt = Math.min(1, et * (settings.rankSwapSpeed ?? 1.0));
 
     // Sort rising bars by destination rank so they rise in order (rank 0 first)
+    const noisyRankMap = noiseStrength > 0
+      ? new Map(interpolatedData.map((d, i) => [d.name, i]))
+      : currRankMap;
+
     const risingEntries = topData
       .map(d => ({
         name: d.name,
         prevRank: prevRankMap.get(d.name) ?? settings.maxBars,
-        currRank: currRankMap.get(d.name) ?? settings.maxBars,
+        currRank: noisyRankMap.get(d.name) ?? settings.maxBars,
       }))
       .filter(e => e.currRank < e.prevRank)
       .sort((a, b) => a.currRank - b.currRank);
@@ -740,6 +793,9 @@ export function useChartRenderer() {
       let rank: number;
       if (springStates) {
         rank = springStates.rank.get(d.name)?.pos ?? interpolatedData.findIndex(x => x.name === d.name);
+      } else if (noiseStrength > 0) {
+        rank = interpolatedData.findIndex(x => x.name === d.name);
+        if (rank === -1) return;
       } else {
         rank = interpolate(prevRank, currRank, rankEt);
       }
