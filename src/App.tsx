@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useTheme } from './hooks/useTheme';
+import { ThemeToggle } from './components/ThemeToggle';
 import { SettingsPanel } from './components/Sidebar/SettingsPanel';
 import { ExportPanel } from './components/Sidebar/ExportPanel';
 import { LineSettingsPanel } from './components/Sidebar/LineSettingsPanel';
@@ -16,7 +18,7 @@ import { useLineChartStore } from './store/lineChartStore';
 import type { LineDataRow } from './store/lineChartStore';
 
 type Tab = 'preview' | 'data';
-type AppView = 'home' | 'bar-editor' | 'line-editor';
+type AppView = 'home' | 'bar-editor-horizontal' | 'bar-editor-vertical' | 'line-editor';
 
 // ---------- Line CSV parser helper ----------
 function parseLineCSV(csv: string): { data: LineDataRow[]; periods: string[] } | null {
@@ -93,7 +95,7 @@ function parseLineCSV(csv: string): { data: LineDataRow[]; periods: string[] } |
 }
 
 // ─── Bar Chart Editor ──────────────────────
-function BarChartEditor({ onHome }: { onHome: () => void }) {
+function BarChartEditor({ onHome, lockedLayout, isDark, toggleTheme }: { onHome: () => void; lockedLayout?: 'horizontal' | 'vertical'; isDark: boolean; toggleTheme: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const { exportSettings, updateExportSettings, csvPreviewReady, setCsvPreviewReady } = useChartStore();
 
@@ -118,7 +120,7 @@ function BarChartEditor({ onHome }: { onHome: () => void }) {
               </svg>
             </div>
             <div>
-              <h1>Bar Chart Race</h1>
+              <h1>{lockedLayout === 'vertical' ? 'Bar Chart Race (Vertical)' : 'Bar Chart Race (Horizontal)'}</h1>
               <span>Creator Studio</span>
             </div>
           </div>
@@ -157,6 +159,7 @@ function BarChartEditor({ onHome }: { onHome: () => void }) {
 
         <div className="top-bar-space" />
 
+        <ThemeToggle isDark={isDark} toggle={toggleTheme} />
         <button className="studio-home-btn" onClick={onHome} title="Go to Home">
           <div className="studio-home-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -187,7 +190,7 @@ function BarChartEditor({ onHome }: { onHome: () => void }) {
           )}
         </div>
         <aside className="right-sidebar">
-          <div className="settings-scroll-area"><SettingsPanel /></div>
+          <div className="settings-scroll-area"><SettingsPanel lockedLayout={lockedLayout} /></div>
           <div className="export-sticky-panel"><ExportPanel /></div>
         </aside>
       </div>
@@ -196,7 +199,7 @@ function BarChartEditor({ onHome }: { onHome: () => void }) {
 }
 
 // ─── Line Chart Editor ─────────────────────
-function LineChartEditor({ onHome }: { onHome: () => void }) {
+function LineChartEditor({ onHome, isDark, toggleTheme }: { onHome: () => void; isDark: boolean; toggleTheme: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -289,6 +292,7 @@ function LineChartEditor({ onHome }: { onHome: () => void }) {
 
         <div className="top-bar-space" />
 
+        <ThemeToggle isDark={isDark} toggle={toggleTheme} />
         <button className="studio-home-btn" onClick={onHome} title="Go to Home">
           <div className="studio-home-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -425,6 +429,7 @@ function LineDataTable() {
 // ─── Root App ──────────────────────────────
 function App() {
   const [view, setView] = useState<AppView>('home');
+  const { isDark, toggle: toggleTheme } = useTheme();
   const { parseCSV } = useCSVParser();
   const { setData: setBarData, data: barData, updateSettings } = useChartStore();
 
@@ -438,13 +443,21 @@ function App() {
   }, []);
 
   const handleHomeSelect = (templateId: string) => {
-    if (templateId === 'line-chart-race') setView('line-editor');
-    else setView('bar-editor');
+    if (templateId === 'line-chart-race') {
+      setView('line-editor');
+    } else if (templateId === 'bar-chart-race-vertical') {
+      updateSettings({ layout: 'vertical' });
+      setView('bar-editor-vertical');
+    } else {
+      updateSettings({ layout: 'horizontal' });
+      setView('bar-editor-horizontal');
+    }
   };
 
-  if (view === 'home') return <HomePage onSelect={handleHomeSelect} />;
-  if (view === 'line-editor') return <LineChartEditor onHome={() => setView('home')} />;
-  return <BarChartEditor onHome={() => setView('home')} />;
+  if (view === 'home') return <HomePage onSelect={handleHomeSelect} isDark={isDark} toggleTheme={toggleTheme} />;
+  if (view === 'line-editor') return <LineChartEditor onHome={() => setView('home')} isDark={isDark} toggleTheme={toggleTheme} />;
+  if (view === 'bar-editor-vertical') return <BarChartEditor onHome={() => setView('home')} lockedLayout="vertical" isDark={isDark} toggleTheme={toggleTheme} />;
+  return <BarChartEditor onHome={() => setView('home')} lockedLayout="horizontal" isDark={isDark} toggleTheme={toggleTheme} />;
 }
 
 export default App;

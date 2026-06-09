@@ -172,6 +172,7 @@ export interface ChartSettings {
 
   springEnabled: boolean;
   springPreset: 'smooth' | 'cinematic' | 'energetic';
+  cumulativeMode: boolean;
 }
 
 export interface PlaybackState {
@@ -236,11 +237,11 @@ export const useChartStore = create<ChartStore>((set) => ({
     barLengthScale: 100,
     minBarLength: 80,
     durationMs: 2000,
-    easing: 'ease-out',
+    easing: 'linear',
     noiseStrength: 0,
     unit: '',
     palette: 'vivid',
-    backgroundColor: '#171F2F',
+    backgroundColor: '',
     colorMode: 'bar',
     singleColorText: 'Apple: #6c63ff\nAmazon: #f7971e\nGoogle: #43e97b',
     titleAlign: 'left',
@@ -314,6 +315,7 @@ export const useChartStore = create<ChartStore>((set) => ({
     tickerMarginX: 0,
     springEnabled: false,
     springPreset: 'cinematic',
+    cumulativeMode: true,
   },
 
   playback: {

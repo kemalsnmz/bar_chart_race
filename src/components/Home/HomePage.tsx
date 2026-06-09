@@ -39,6 +39,38 @@ const BarChartRacePreview = () => (
   </svg>
 );
 
+const BarChartRaceVerticalPreview = () => (
+  <svg viewBox="0 0 280 160" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+    <rect width="280" height="160" fill="#171F2F" rx="8"/>
+    <text x="16" y="22" fill="#fff" fontSize="9" fontWeight="700" fontFamily="Inter,sans-serif">Top Countries · 2023</text>
+    {/* Bar 1 */}
+    <rect x="24"  y="35" width="26" height="100" rx="4" fill="#6c63ff"/>
+    <text x="37"  y="145" fill="#fff" fontSize="7" fontWeight="700" fontFamily="Inter,sans-serif" textAnchor="middle">China</text>
+    <text x="37"  y="30"  fill="#fff" fontSize="7" fontFamily="Inter,sans-serif" textAnchor="middle">1.4B</text>
+    {/* Bar 2 */}
+    <rect x="56"  y="43" width="26" height="92"  rx="4" fill="#f7971e"/>
+    <text x="69"  y="145" fill="#fff" fontSize="7" fontWeight="700" fontFamily="Inter,sans-serif" textAnchor="middle">India</text>
+    <text x="69"  y="38"  fill="#fff" fontSize="7" fontFamily="Inter,sans-serif" textAnchor="middle">1.4B</text>
+    {/* Bar 3 */}
+    <rect x="88"  y="82" width="26" height="53"  rx="4" fill="#43e97b"/>
+    <text x="101" y="145" fill="#fff" fontSize="7" fontWeight="700" fontFamily="Inter,sans-serif" textAnchor="middle">USA</text>
+    <text x="101" y="77"  fill="#fff" fontSize="7" fontFamily="Inter,sans-serif" textAnchor="middle">335M</text>
+    {/* Bar 4 */}
+    <rect x="120" y="100" width="26" height="35" rx="4" fill="#f64f59"/>
+    <text x="133" y="145" fill="#fff" fontSize="7" fontWeight="700" fontFamily="Inter,sans-serif" textAnchor="middle">Brazil</text>
+    <text x="133" y="95"  fill="#fff" fontSize="7" fontFamily="Inter,sans-serif" textAnchor="middle">228M</text>
+    {/* Bar 5 */}
+    <rect x="152" y="108" width="26" height="27" rx="4" fill="#38b2f8"/>
+    <text x="165" y="145" fill="#fff" fontSize="7" fontWeight="700" fontFamily="Inter,sans-serif" textAnchor="middle">Pak.</text>
+    <text x="165" y="103" fill="#fff" fontSize="7" fontFamily="Inter,sans-serif" textAnchor="middle">183M</text>
+    {/* Year watermark */}
+    <text x="264" y="150" fill="#fff" fontSize="22" fontWeight="900" fontFamily="Inter,sans-serif" textAnchor="end" opacity="0.18">2023</text>
+    {/* Play icon overlay */}
+    <circle cx="248" cy="30" r="12" fill="rgba(108,99,255,0.25)" stroke="#6c63ff" strokeWidth="1.5"/>
+    <polygon points="244,25 244,35 255,30" fill="#6c63ff"/>
+  </svg>
+);
+
 const LineRacePreview = () => (
   <svg viewBox="0 0 280 160" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
     <rect width="280" height="160" fill="#1a1f2e" rx="8"/>
@@ -103,10 +135,17 @@ const BubbleRacePreview = () => (
 const TEMPLATES: Template[] = [
   {
     id: 'bar-chart-race',
-    title: 'Bar Chart Race',
-    description: 'Show changing rankings over time with competing bars.',
+    title: 'Bar Chart Race (Horizontal)',
+    description: 'Show changing rankings over time with competing horizontal bars.',
     available: true,
     preview: <BarChartRacePreview />,
+  },
+  {
+    id: 'bar-chart-race-vertical',
+    title: 'Bar Chart Race (Vertical)',
+    description: 'Show changing rankings over time with competing vertical bars.',
+    available: true,
+    preview: <BarChartRaceVerticalPreview />,
   },
   {
     id: 'line-chart-race',
@@ -131,11 +170,15 @@ const TEMPLATES: Template[] = [
   },
 ];
 
+import { ThemeToggle } from '../ThemeToggle';
+
 interface HomePageProps {
   onSelect: (templateId: string) => void;
+  isDark: boolean;
+  toggleTheme: () => void;
 }
 
-export function HomePage({ onSelect }: HomePageProps) {
+export function HomePage({ onSelect, isDark, toggleTheme }: HomePageProps) {
   return (
     <div className="home-page">
       <header className="home-header">
@@ -153,6 +196,7 @@ export function HomePage({ onSelect }: HomePageProps) {
             <span className="home-brand-sub">Animated chart creation platform</span>
           </div>
         </div>
+        <ThemeToggle isDark={isDark} toggle={toggleTheme} />
       </header>
 
       <main className="home-main">

@@ -49,7 +49,7 @@ function ColorTab({ id, active, onClick, children }: {
 }
 
 // ── Main panel ─────────────────────────────────────────
-export function SettingsPanel() {
+export function SettingsPanel({ lockedLayout }: { lockedLayout?: 'horizontal' | 'vertical' } = {}) {
   const { settings, updateSettings, data, periods } = useChartStore();
   const [tickerWordSel, setTickerWordSel] = useState<{ entryIdx: number; word: string } | null>(null);
   const [hoveredClip, setHoveredClip] = useState<number | null>(null);
@@ -77,7 +77,7 @@ export function SettingsPanel() {
           <span>Background</span>
           <div className="fl-sub-line" />
           <ColorPicker
-            value={settings.backgroundColor || '#ffffff'}
+            value={settings.backgroundColor || getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#F3EDE2'}
             onChange={color => updateSettings({ backgroundColor: color })}
           />
         </div>
@@ -730,6 +730,17 @@ export function SettingsPanel() {
       <Section title="Bars" defaultOpen={false}>
 
         <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Cumulative Mode</label>
+          <div className="fl-tabs" style={{ margin: 0 }}>
+            <button className={'fl-color-tab' + (!settings.cumulativeMode ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ cumulativeMode: false })}>Off</button>
+            <button className={'fl-color-tab' + (settings.cumulativeMode ? ' fl-color-tab-active' : '')}
+              onClick={() => updateSettings({ cumulativeMode: true })}>On</button>
+          </div>
+        </div>
+
+        {!lockedLayout && (
+        <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Layout</label>
           <div className="fl-tabs" style={{ margin: 0 }}>
             <button className={'fl-color-tab' + (settings.layout !== 'vertical' ? ' fl-color-tab-active' : '')}
@@ -738,6 +749,7 @@ export function SettingsPanel() {
               onClick={() => updateSettings({ layout: 'vertical' })}>Vertical</button>
           </div>
         </div>
+        )}
 
         <div className="fl-field" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <label className="fl-tiny-label" style={{ marginBottom: 0 }}>Opacity</label>

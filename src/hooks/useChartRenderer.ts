@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from 'react';
+import { useCallback, useMemo, useReducer } from 'react';
 import * as d3 from 'd3';
 import { useChartStore } from '../store/chartStore';
 import { interpolate } from '../utils/interpolate';
@@ -168,6 +168,24 @@ export function useChartRenderer() {
   const { data, periods, settings } = useChartStore();
   const [imgVersion, bumpImgVersion] = useReducer((n: number) => n + 1, 0);
 
+  // Precompute cumulative sums per entity per period (only when cumulativeMode is on)
+  const cumulativeMap = useMemo(() => {
+    if (!settings.cumulativeMode) return null;
+    const allNames = [...new Set(data.map(d => d.name))];
+    const result = new Map<string, Map<string, number>>();
+    for (const name of allNames) {
+      const pm = new Map<string, number>();
+      let cum = 0;
+      for (const period of periods) {
+        const row = data.find(d => d.name === name && d.time === period);
+        cum += row?.value ?? 0;
+        pm.set(period, cum);
+      }
+      result.set(name, pm);
+    }
+    return result;
+  }, [data, periods, settings.cumulativeMode]);
+
   const drawFrame = useCallback((
     ctx: CanvasRenderingContext2D,
     physicalWidth: number,
@@ -179,7 +197,8 @@ export function useChartRenderer() {
   ) => {
     const isVertical = settings.layout === 'vertical';
 
-    ctx.fillStyle = settings.backgroundColor || '#ffffff';
+    const themeBg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#F3EDE2';
+    ctx.fillStyle = settings.backgroundColor || themeBg;
     ctx.fillRect(0, 0, physicalWidth, physicalHeight);
 
     // Find active background entry for current period
@@ -264,8 +283,12 @@ export function useChartRenderer() {
 
     const et = applyEasing(t, settings.easing ?? 'ease-out');
 
-    const prevDataMap = new Map(data.filter(d => d.time === prevPeriod).map(d => [d.name, d.value]));
-    const currDataMap = new Map(data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value]));
+    const prevDataMap = cumulativeMap
+      ? new Map([...cumulativeMap.entries()].map(([name, pm]) => [name, pm.get(prevPeriod) ?? 0]))
+      : new Map(data.filter(d => d.time === prevPeriod).map(d => [d.name, d.value]));
+    const currDataMap = cumulativeMap
+      ? new Map([...cumulativeMap.entries()].map(([name, pm]) => [name, pm.get(currentPeriod) ?? 0]))
+      : new Map(data.filter(d => d.time === currentPeriod).map(d => [d.name, d.value]));
     const allEntities = new Set([...prevDataMap.keys(), ...currDataMap.keys()]);
 
     const interpolatedData: { name: string; value: number }[] = [];
@@ -520,11 +543,16 @@ export function useChartRenderer() {
       if (isVertical) {
         totalY = (settings.timeVisible !== false) ? physicalHeight * 0.28 : physicalHeight * 0.05;
       } else {
-        // Position total inside bottom margin, above the time watermark
         const hasTime = settings.timeVisible !== false;
-        totalY = hasTime
-          ? physicalHeight - margin.bottom * 0.60
-          : physicalHeight - margin.bottom * 0.18;
+        if (hasTime) {
+          // Anchor total counter just above the year watermark text
+          const yearFontSizePx = Math.round(Math.min(physicalWidth, physicalHeight) * ((settings.timeFontSize ?? 22) / 100));
+          const yearBaseY = physicalHeight - margin.bottom * 0.18 + (settings.timeMarginY ?? 0);
+          const totalFontSizePx = Math.round(physicalHeight * 0.06);
+          totalY = yearBaseY - yearFontSizePx - totalFontSizePx * 0.15;
+        } else {
+          totalY = physicalHeight - margin.bottom * 0.18;
+        }
       }
       totalY += (settings.totalMarginY ?? 0);
       ctx.fillText(`Total: ${formatValue(totalVal, vfmt)} ${settings.unit}`, totalX, totalY);
@@ -608,11 +636,18 @@ export function useChartRenderer() {
 
         // Total counter Y anchor (must match the main total draw above)
         const hasTime2 = settings.timeVisible !== false;
-        const totalY = isVertical
-          ? (hasTime2 ? physicalHeight * 0.28 : physicalHeight * 0.05)
-          : (hasTime2
-              ? physicalHeight - margin.bottom * 0.60
-              : physicalHeight - margin.bottom * 0.18);
+        let totalY: number;
+        if (isVertical) {
+          totalY = hasTime2 ? physicalHeight * 0.28 : physicalHeight * 0.05;
+        } else if (hasTime2) {
+          const yearFontSizePx2 = Math.round(Math.min(physicalWidth, physicalHeight) * ((settings.timeFontSize ?? 22) / 100));
+          const yearBaseY2 = physicalHeight - margin.bottom * 0.18 + (settings.timeMarginY ?? 0);
+          const totalFontSizePx2 = Math.round(physicalHeight * 0.06);
+          totalY = yearBaseY2 - yearFontSizePx2 - totalFontSizePx2 * 0.15;
+        } else {
+          totalY = physicalHeight - margin.bottom * 0.18;
+        }
+        totalY += (settings.totalMarginY ?? 0);
 
         const boxX = physicalWidth * 0.95 - boxW - mx;
         const boxY = totalY - boxH - 10 - mb; // grows upward
@@ -676,7 +711,7 @@ export function useChartRenderer() {
           // pill background for readability
           const labelSize2 = Math.round(physicalHeight * 0.020);
           ctx.globalAlpha = gridOpacity * 0.85;
-          ctx.fillStyle = settings.backgroundColor || '#ffffff';
+          ctx.fillStyle = settings.backgroundColor || getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#F3EDE2';
           ctx.beginPath();
           ctx.roundRect(tx - tw / 2 - padX, labelY - labelSize2 - padY, tw + padX * 2, labelSize2 + padY * 2, labelSize2 * 0.35);
           ctx.fill();
@@ -772,10 +807,12 @@ export function useChartRenderer() {
       .sort((a, b) => a.currRank - b.currRank);
 
     const risingCount = risingEntries.length;
+    // Fixed animation window per bar — all rising bars animate at the same speed
+    const animDur = risingCount <= 1 ? 1.0 : 0.6;
+    const maxDelay = 1 - animDur;
     risingEntries.forEach((e, i) => {
-      // Stagger: bar going to rank 0 starts immediately, each subsequent bar delayed
-      const delay = risingCount > 1 ? (i / risingCount) * 1.5 : 0;
-      const progress = Math.min(1, Math.max(0, (rankEt - delay) / Math.max(0.01, 1 - delay)));
+      const delay = risingCount > 1 ? (i / (risingCount - 1)) * maxDelay : 0;
+      const progress = Math.min(1, Math.max(0, (rankEt - delay) / animDur));
       if (progress > 0) {
         riseProgressMap.set(e.name, progress);
       }
@@ -1030,7 +1067,7 @@ export function useChartRenderer() {
       }
     });
 
-  }, [data, periods, settings, imgVersion, bumpImgVersion]);
+  }, [data, periods, settings, imgVersion, bumpImgVersion, cumulativeMap]);
 
   const seekClipVideos = useCallback(async (periodIndex: number, t: number) => {
     const curIdx = periodIndex;
